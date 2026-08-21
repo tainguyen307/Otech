@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -24,4 +26,7 @@ public class Role {
     private RoleName name;
 
     private String description;
+
+    @OneToMany(mappedBy = "role", fetch = FetchType.LAZY)
+    private Set<RolePermission> rolePermissions = new HashSet<>();
 }
