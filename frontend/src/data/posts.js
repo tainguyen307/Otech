@@ -1,0 +1,4 @@
+export const posts = [
+  { id: 1, name: 'Minh Anh', handle: '@minhanh', time: '18 min ago', avatar: 'https://i.pravatar.cc/96?img=47', image: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1100&q=85', title: 'Hand grinder, barely used', copy: 'Moving to an electric setup, so this lovely little grinder needs a new home.', price: '$42', likes: 24, comments: 6, tag: '2.4kg CO2 saved' },
+  { id: 2, name: 'Khoa Nguyen', handle: '@khoan', time: '1 hr ago', avatar: 'https://i.pravatar.cc/96?img=12', image: 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85?auto=format&fit=crop&w=1100&q=85', title: 'Oak desk for a smaller space', copy: 'Solid oak, warm finish, and a tiny drawer for all the things that disappear.', price: '$95', likes: 41, comments: 11, tag: '8kg CO2 saved' },
+]

@@ -24,8 +24,20 @@ public class AuthController {
     }
 
     @PostMapping("/signup")
-    public AuthResponse signup(@Valid @RequestBody RegisterRequest request) {
-        return authService.register(request);
+    public Map<String, String> signup(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        return Map.of("message", "Verification code sent to your email");
+    }
+
+    @PostMapping("/verify-signup")
+    public AuthResponse verifySignup(@Valid @RequestBody VerifySignupRequest request) {
+        return authService.verifySignup(request);
+    }
+
+    @PostMapping("/resend-signup-otp")
+    public Map<String, String> resendSignupOtp(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.resendSignupOtp(request.email());
+        return Map.of("message", "Verification code sent to your email");
     }
 
     @PostMapping({"/signin", "/login"})
