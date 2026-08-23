@@ -4,7 +4,14 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>Otech | Secondhand, shared well</title>
+    <script>
+      document.documentElement.classList.toggle('dark', localStorage.getItem('theme') === 'dark')
+    </script>
+    <style>
+      html, body, #root { background: #f5f7fa; }
+      html.dark, html.dark body, html.dark #root, html.dark #root > div { background: #0b1220; color-scheme: dark; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
