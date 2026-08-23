@@ -61,13 +61,8 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public Map<String, Object> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        String resetToken = authService.requestPasswordReset(request);
-        Map<String, Object> response = new java.util.HashMap<>();
-        response.put("message", "If the email exists, password reset instructions have been created");
-        if (resetToken != null) {
-            response.put("resetToken", resetToken);
-        }
-        return response;
+        authService.requestPasswordReset(request);
+        return Map.of("message", "If the email exists, a password reset code has been sent");
     }
 
     @PostMapping("/reset-password")

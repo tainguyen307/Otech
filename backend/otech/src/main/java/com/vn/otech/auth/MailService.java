@@ -26,4 +26,16 @@ public class MailService {
                 + ". It expires in 10 minutes.");
         mailSender.send(message);
     }
+
+    public void sendPasswordResetOtp(String email, String otp) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        if (from != null && !from.isBlank()) {
+            message.setFrom(from);
+        }
+        message.setTo(email);
+        message.setSubject("Your Otech password reset code");
+        message.setText("Your Otech password reset code is " + otp
+                + ". It expires in 30 minutes.");
+        mailSender.send(message);
+    }
 }

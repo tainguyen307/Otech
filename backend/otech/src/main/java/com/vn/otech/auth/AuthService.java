@@ -41,7 +41,6 @@ public class AuthService {
     private final long signupOtpExpirationMinutes;
     private final int loginMaxFailures;
     private final long loginLockoutMinutes;
-    private final boolean exposeResetToken;
     private final SecureRandom secureRandom = new SecureRandom();
     private final Map<String, LoginFailures> loginFailures = new ConcurrentHashMap<>();
 
@@ -52,8 +51,7 @@ public class AuthService {
                        SignupOtpTokenRepository signupOtpTokenRepository, MailService mailService,
                        @Value("${app.auth.signup-otp-expiration-minutes}") long signupOtpExpirationMinutes,
                        @Value("${app.auth.login-max-failures}") int loginMaxFailures,
-                       @Value("${app.auth.login-lockout-minutes}") long loginLockoutMinutes,
-                       @Value("${app.auth.expose-reset-token}") boolean exposeResetToken) {
+                       @Value("${app.auth.login-lockout-minutes}") long loginLockoutMinutes) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.resetTokenRepository = resetTokenRepository;
@@ -65,7 +63,6 @@ public class AuthService {
         this.signupOtpExpirationMinutes = signupOtpExpirationMinutes;
         this.loginMaxFailures = loginMaxFailures;
         this.loginLockoutMinutes = loginLockoutMinutes;
-        this.exposeResetToken = exposeResetToken;
     }
 
     public void register(RegisterRequest request) {
@@ -151,18 +148,18 @@ public class AuthService {
 
     private record LoginFailures(int attempts, LocalDateTime lockedUntil) { }
 
-    public String requestPasswordReset(ForgotPasswordRequest request) {
+    public void requestPasswordReset(ForgotPasswordRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.email().trim()).orElse(null);
         if (user == null) {
-            return null;
+            return;
         }
-        String rawToken = UUID.randomUUID() + "-" + UUID.randomUUID();
+        String rawToken = Integer.toString(100000 + secureRandom.nextInt(900000));
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setUser(user);
         resetToken.setTokenHash(hash(rawToken));
         resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(resetTokenExpirationMinutes));
         resetTokenRepository.save(resetToken);
-        return exposeResetToken ? rawToken : null;
+        mailService.sendPasswordResetOtp(user.getEmail(), rawToken);
     }
 
     public void resetPassword(ResetPasswordRequest request) {
@@ -180,7 +177,7 @@ public class AuthService {
         UserDetails details = DatabaseUserDetailsService.toUserDetails(user);
         String token = jwtService.generateToken(details, user.getId());
         List<String> authorities = details.getAuthorities().stream().map(a -> a.getAuthority()).toList();
-        return new AuthResponse(token, "Bearer", user.getId().toString(), user.getEmail(),
+        return new AuthResponse(token, "Bearer", user.getId().toString(), user.getEmail(), user.getFullName(), user.getAvatarUrl(),
                 user.getRole().getName().name(), authorities);
     }
 

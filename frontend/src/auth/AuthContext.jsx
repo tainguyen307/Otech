@@ -3,7 +3,11 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const AuthContext = createContext(null)
 
 function readUser() {
-  try { return JSON.parse(localStorage.getItem('otech_user') || 'null') } catch { return null }
+  try {
+    const storedUser = JSON.parse(localStorage.getItem('user') || 'null')
+    if (!storedUser) return null
+    return { ...storedUser, fullName: storedUser.fullName || storedUser.name || 'Otech member' }
+  } catch { return null }
 }
 
 export function AuthProvider({ children }) {
@@ -11,8 +15,8 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const handleAuthRequired = () => {
-      localStorage.removeItem('otech_token')
-      localStorage.removeItem('otech_user')
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
       setUser(null)
     }
     window.addEventListener('otech:auth-required', handleAuthRequired)
@@ -20,15 +24,15 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = (authResponse) => {
-    const nextUser = { id: authResponse.userId, email: authResponse.email, role: authResponse.role }
-    localStorage.setItem('otech_token', authResponse.token)
-    localStorage.setItem('otech_user', JSON.stringify(nextUser))
+    const nextUser = { id: authResponse.userId, email: authResponse.email, fullName: authResponse.fullName || 'Otech member', avatarUrl: authResponse.avatarUrl || null, role: authResponse.role }
+    localStorage.setItem('token', authResponse.token)
+    localStorage.setItem('user', JSON.stringify(nextUser))
     setUser(nextUser)
   }
 
   const signOut = () => {
-    localStorage.removeItem('otech_token')
-    localStorage.removeItem('otech_user')
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     setUser(null)
   }
 
