@@ -36,7 +36,13 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  return <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), signIn, signOut }}>{children}</AuthContext.Provider>
+  const updateUser = (profile) => {
+    const nextUser = { ...user, ...profile, fullName: profile.fullName || 'Otech member' }
+    localStorage.setItem('user', JSON.stringify(nextUser))
+    setUser(nextUser)
+  }
+
+  return <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), signIn, signOut, updateUser }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() { return useContext(AuthContext) }

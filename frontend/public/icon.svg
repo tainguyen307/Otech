@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Nền Dark-mode Luxury -->
+    <linearGradient id="premiumBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="50%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#1F2937"/>
+    </linearGradient>
+
+    <!-- Gradient Xanh Neon Tech -->
+    <linearGradient id="neonBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F2FE"/>
+      <stop offset="100%" stop-color="#4FACFE"/>
+    </linearGradient>
+
+    <!-- Gradient Chấm thông báo -->
+    <linearGradient id="pulseOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF5E62"/>
+      <stop offset="100%" stop-color="#FF9966"/>
+    </linearGradient>
+
+    <!-- Đổ bóng hiệu ứng đổ khối -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6"/>
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#00F2FE" flood-opacity="0.15"/>
+    </filter>
+    
+    <filter id="dotGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#FF5E62" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Nền Canvas -->
+  <rect width="512" height="512" rx="128" fill="url(#premiumBg)"/>
+
+  <!-- Hệ thống Icon chính -->
+  <g filter="url(#softGlow)">
+    
+    <!-- 1. BONG BÓNG CHAT O -->
+    <path
+      d="M256 80
+         C353.2 80 432 158.8 432 256
+         C432 353.2 353.2 432 256 432
+         C220.5 432 187.5 421.5 159.8 403.4
+         L92 428
+         L113.6 360.2
+         C92.5 331.4 80 295.2 80 256
+         C80 158.8 158.8 80 256 80 Z"
+      fill="none"
+      stroke="url(#neonBlue)"
+      stroke-width="28"
+      stroke-linecap="round"
+      stroke-linejoin="round"/>
+
+    <!-- 2. CART ĐẶC TRẮNG + MŨI TÊN LIỀN KHỐI -->
+    <!-- Thân giỏ hàng được đổ đặc (Fill) và bo góc bằng Stroke -->
+    <path 
+      d="M170 205 
+         h26 
+         l18 64 
+         c1.5 5 6 9 12 9 
+         h66 
+         c6 0 10.5 -4 12 -9 
+         l24 -64 
+         H185" 
+      fill="#FFFFFF" 
+      stroke="#FFFFFF" 
+      stroke-width="16" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+    
+    <!-- Hai bánh xe tách mảng mịn màng -->
+    <circle cx="220" cy="324" r="14" fill="#FFFFFF"/>
+    <circle cx="288" cy="324" r="14" fill="#FFFFFF"/>
+  </g>
+
+  <!-- 3. CHẤM THÔNG BÁO (Notification Dot) -->
+  <circle cx="385" cy="127" r="26" fill="url(#pulseOrange)" filter="url(#dotGlow)"/>
+</svg>

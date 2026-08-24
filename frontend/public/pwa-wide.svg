@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800">
+  <title>Otech social marketplace on desktop</title>
+  <rect width="1280" height="800" fill="#f5f7fa"/>
+  <rect width="248" height="800" fill="#ffffff"/>
+  <rect x="32" y="28" width="184" height="42" rx="12" fill="#0b1220"/>
+  <circle cx="53" cy="49" r="14" fill="#087cf5"/>
+  <text x="77" y="57" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="800">otech.</text>
+  <text x="292" y="94" fill="#718097" font-family="sans-serif" font-size="15">Your community</text>
+  <text x="292" y="143" fill="#172238" font-family="sans-serif" font-size="42" font-weight="800">Good finds, shared well.</text>
+  <text x="292" y="176" fill="#718097" font-family="sans-serif" font-size="18">See what your neighbors are passing on today.</text>
+  <rect x="292" y="216" width="210" height="42" rx="12" fill="#172238"/>
+  <text x="356" y="243" fill="#ffffff" font-family="sans-serif" font-size="16" font-weight="700">For you</text>
+  <rect x="524" y="216" width="122" height="42" rx="12" fill="#ffffff" stroke="#e3e8f0"/>
+  <text x="556" y="243" fill="#718097" font-family="sans-serif" font-size="16">Nearby</text>
+  <rect x="292" y="300" width="450" height="330" rx="16" fill="#ffffff" stroke="#e3e8f0"/>
+  <rect x="766" y="300" width="450" height="330" rx="16" fill="#ffffff" stroke="#e3e8f0"/>
+  <rect x="316" y="324" width="402" height="190" rx="12" fill="#d8e8f5"/>
+  <rect x="790" y="324" width="402" height="190" rx="12" fill="#e8dfd3"/>
+  <text x="316" y="560" fill="#172238" font-family="sans-serif" font-size="22" font-weight="700">Hand grinder, barely used</text>
+  <text x="790" y="560" fill="#172238" font-family="sans-serif" font-size="22" font-weight="700">Oak desk for a smaller space</text>
+  <text x="316" y="594" fill="#087cf5" font-family="sans-serif" font-size="18" font-weight="700">$42</text>
+  <text x="790" y="594" fill="#087cf5" font-family="sans-serif" font-size="18" font-weight="700">$95</text>
+</svg>
