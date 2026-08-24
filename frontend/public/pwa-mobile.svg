@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <title>Otech social marketplace on mobile</title>
+  <rect width="390" height="844" fill="#f5f7fa"/>
+  <rect width="390" height="76" fill="#ffffff"/>
+  <circle cx="28" cy="38" r="18" fill="#087cf5"/>
+  <text x="55" y="47" fill="#172238" font-family="sans-serif" font-size="25" font-weight="800">otech.</text>
+  <text x="24" y="124" fill="#718097" font-family="sans-serif" font-size="14">Your community</text>
+  <text x="24" y="160" fill="#172238" font-family="sans-serif" font-size="29" font-weight="800">Good finds,</text>
+  <text x="24" y="194" fill="#172238" font-family="sans-serif" font-size="29" font-weight="800">shared well.</text>
+  <text x="24" y="222" fill="#718097" font-family="sans-serif" font-size="15">See what your neighbors are passing on today.</text>
+  <rect x="24" y="258" width="342" height="42" rx="12" fill="#172238"/>
+  <text x="168" y="285" fill="#ffffff" font-family="sans-serif" font-size="15" font-weight="700" text-anchor="middle">For you</text>
+  <rect x="24" y="324" width="342" height="260" rx="16" fill="#ffffff" stroke="#e3e8f0"/>
+  <rect x="40" y="340" width="310" height="150" rx="12" fill="#d8e8f5"/>
+  <text x="40" y="529" fill="#172238" font-family="sans-serif" font-size="19" font-weight="700">Hand grinder, barely used</text>
+  <text x="40" y="560" fill="#087cf5" font-family="sans-serif" font-size="17" font-weight="700">$42</text>
+  <rect y="780" width="390" height="64" fill="#ffffff" stroke="#e3e8f0"/>
+  <circle cx="64" cy="812" r="10" fill="#087cf5"/>
+  <circle cx="195" cy="812" r="10" fill="#cbd5e1"/>
+  <circle cx="326" cy="812" r="10" fill="#cbd5e1"/>
+</svg>

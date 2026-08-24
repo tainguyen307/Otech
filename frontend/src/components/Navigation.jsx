@@ -1,11 +1,10 @@
-import { Home, LayoutGrid, LogIn, MessageCircle, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
+import { Home, LayoutGrid, LogIn, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
 import Logo from './Logo'
 
 export const navItems = [
   { label: 'Home', icon: Home },
   { label: 'Marketplace', icon: LayoutGrid },
   { label: 'Messages', icon: MessageCircle, requiresAuth: true },
-  { label: 'Profile', icon: UserRound, requiresAuth: true },
   { label: 'Admin', icon: ShieldCheck, requiresAuth: true, roles: ['ADMIN'] },
 ]
 
