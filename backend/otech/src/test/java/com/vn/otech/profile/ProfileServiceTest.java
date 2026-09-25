@@ -9,10 +9,13 @@ import static org.mockito.Mockito.when;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.Uploader;
+import com.vn.otech.auth.repository.UserRepository;
 import com.vn.otech.entity.Role;
 import com.vn.otech.entity.RoleName;
 import com.vn.otech.entity.User;
-import com.vn.otech.repository.UserRepository;
+import com.vn.otech.profile.dto.ProfileResponse;
+import com.vn.otech.profile.dto.ProfileUpdateRequest;
+import com.vn.otech.profile.service.ProfileService;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
