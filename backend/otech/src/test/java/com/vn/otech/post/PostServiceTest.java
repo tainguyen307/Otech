@@ -6,10 +6,11 @@ import static org.mockito.Mockito.when;
 
 import com.vn.otech.entity.Post;
 import com.vn.otech.entity.User;
-import com.vn.otech.repository.PostRepository;
+import com.vn.otech.post.dto.PostResponse;
+import com.vn.otech.post.repository.PostRepository;
+import com.vn.otech.post.service.PostService;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,18 +41,18 @@ class PostServiceTest {
         post.setCreatedAt(LocalDateTime.now().minusMinutes(15));
         when(postRepository.findByHiddenFalseOrderByCreatedAtDesc()).thenReturn(List.of(post));
 
-        List<Map<String, Object>> result = postService.listPosts();
+        List<PostResponse> result = postService.listPosts();
 
         assertEquals(1, result.size());
-        Map<String, Object> response = result.getFirst();
-        assertEquals(postId, response.get("id"));
-        assertEquals("Ada Lovelace", response.get("name"));
-        assertEquals("@ada", response.get("handle"));
-        assertEquals("15 min ago", response.get("time"));
-        assertEquals("https://example.com/ada.png", response.get("avatar"));
-        assertEquals("A useful community post", response.get("title"));
-        assertEquals("A useful community post", response.get("copy"));
-        assertEquals("Community post", response.get("tag"));
+        PostResponse response = result.getFirst();
+        assertEquals(postId, response.id());
+        assertEquals("Ada Lovelace", response.name());
+        assertEquals("@ada", response.handle());
+        assertEquals("15 min ago", response.time());
+        assertEquals("https://example.com/ada.png", response.avatar());
+        assertEquals("A useful community post", response.title());
+        assertEquals("A useful community post", response.copy());
+        assertEquals("Community post", response.tag());
     }
 
     @Test
@@ -61,14 +62,14 @@ class PostServiceTest {
         post.setCreatedAt(null);
         when(postRepository.findByHiddenFalseOrderByCreatedAtDesc()).thenReturn(List.of(post));
 
-        Map<String, Object> response = postService.listPosts().getFirst();
+        PostResponse response = postService.listPosts().getFirst();
 
-        assertEquals("Otech member", response.get("name"));
-        assertEquals("", response.get("handle"));
-        assertEquals("Recently", response.get("time"));
-        assertEquals("", response.get("avatar"));
-        assertEquals("Community post", response.get("title"));
-        assertEquals(null, response.get("copy"));
+        assertEquals("Otech member", response.name());
+        assertEquals("", response.handle());
+        assertEquals("Recently", response.time());
+        assertEquals("", response.avatar());
+        assertEquals("Community post", response.title());
+        assertEquals(null, response.copy());
     }
 
     @Test
@@ -78,18 +79,18 @@ class PostServiceTest {
         post.setContent(content);
         when(postRepository.findByHiddenFalseOrderByCreatedAtDesc()).thenReturn(List.of(post));
 
-        Map<String, Object> response = postService.listPosts().getFirst();
+        PostResponse response = postService.listPosts().getFirst();
 
-        assertEquals(content, response.get("copy"));
-        assertEquals(content.substring(0, 56) + "...", response.get("title"));
-        assertEquals(59, ((String) response.get("title")).length());
+        assertEquals(content, response.copy());
+        assertEquals(content.substring(0, 56) + "...", response.title());
+        assertEquals(59, response.title().length());
     }
 
     @Test
     void listPostsReturnsAnEmptyListWhenRepositoryHasNoVisiblePosts() {
         when(postRepository.findByHiddenFalseOrderByCreatedAtDesc()).thenReturn(List.of());
 
-        List<Map<String, Object>> result = postService.listPosts();
+        List<PostResponse> result = postService.listPosts();
 
         assertTrue(result.isEmpty());
     }

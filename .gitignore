@@ -1,3 +1,4 @@
 # Local agent skills and workspace-only customizations
+.vscode
 .agents/
 skills-lock.json
