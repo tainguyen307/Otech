@@ -6,6 +6,7 @@ import com.vn.otech.post.repository.PostRepository;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +25,19 @@ public class PostService {
                 .toList();
     }
 
+    public List<PostResponse> listPostsByAuthor(UUID authorId) {
+        return postRepository.findByAuthor_IdAndHiddenFalseOrderByCreatedAtDesc(authorId).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private PostResponse toResponse(Post post) {
         String authorName = post.getAuthor() == null ? "Otech member" : post.getAuthor().getFullName();
         String handle = post.getAuthor() == null ? "" : "@" + post.getAuthor().getEmail().split("@", 2)[0];
         String avatarUrl = post.getAuthor() == null || post.getAuthor().getAvatarUrl() == null ? "" : post.getAuthor().getAvatarUrl();
         return new PostResponse(
                 post.getId(),
+                post.getAuthor() == null ? null : post.getAuthor().getId(),
                 authorName,
                 handle,
                 formatAge(post.getCreatedAt()),

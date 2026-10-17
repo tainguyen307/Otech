@@ -4,6 +4,7 @@ import java.util.UUID;
 
 public record PostResponse(
         UUID id,
+        UUID authorId,
         String name,
         String handle,
         String time,

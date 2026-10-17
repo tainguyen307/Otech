@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PostRepository extends JpaRepository<Post, UUID> {
     List<Post> findByHiddenFalseOrderByCreatedAtDesc();
+
+    List<Post> findByAuthor_IdAndHiddenFalseOrderByCreatedAtDesc(UUID authorId);
 }
