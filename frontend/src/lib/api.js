@@ -12,10 +12,19 @@ export async function apiFetch(path, options = {}) {
     },
   })
 
-  if (response.status === 401 || response.status === 403) {
+  if (response.status === 401) {
     window.dispatchEvent(new CustomEvent('otech:auth-required'))
   }
   return response
+}
+
+export async function apiErrorMessage(response, fallback) {
+  try {
+    const body = await response.json()
+    return body.error?.message || body.message || fallback
+  } catch {
+    return fallback
+  }
 }
 
 export { API_URL }

@@ -7,9 +7,12 @@ Otech là ứng dụng cộng đồng và mua bán hàng hóa đã qua sử dụ
 - Đăng ký tài khoản, xác minh email, đăng nhập và khôi phục mật khẩu.
 - Xem bảng tin bài đăng công khai.
 - Cập nhật hồ sơ, đổi mật khẩu và tải ảnh đại diện.
+- Mở hồ sơ công khai từ avatar bài đăng, xem bài viết và theo dõi hoặc nhắn tin cho thành viên.
+- Tìm kiếm, lọc, xem chi tiết, đăng và quản lý tin sản phẩm đã qua sử dụng.
+- Nhắn tin theo sản phẩm hoặc trực tiếp; lưu lịch sử, cập nhật realtime và trạng thái đã đọc.
 - Giao diện responsive, hỗ trợ chế độ sáng/tối và cài đặt PWA.
 
-Các tính năng tìm kiếm/lọc, đăng và quản lý sản phẩm, thích/lưu/bình luận, nhắn tin, thông báo và quản trị chưa được kết nối đầy đủ với API. Một số nút chỉ thay đổi trạng thái giao diện; các tab Listings và Saved hiện là nội dung giữ chỗ. Backend có entity cho các miền dữ liệu rộng hơn nhưng chưa có API tương ứng.
+Các luồng marketplace và chat dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Các tính năng tương tác bài viết, Page, thông báo, báo cáo và quản trị vẫn chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
 
 ## Cấu trúc dự án
 
@@ -51,7 +54,7 @@ Frontend và backend là hai tiến trình riêng. Khi triển khai, cần cấu
 - SMTP để gửi mã xác minh và khôi phục mật khẩu
 - Cloudinary để bật tải ảnh đại diện
 
-Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. File `script.sql` hiện nằm ở thư mục cha của repository trong workspace, nhưng không được Git của repository Otech theo dõi. Khi clone repository độc lập, cần cung cấp schema riêng trước khi chạy backend.
+Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. File `script.sql` nằm ở thư mục cha của repository trong workspace, không được Git của repository Otech theo dõi; file này chứa schema nền cùng phần bổ sung marketplace/chat dạng additive. Khi clone repository độc lập, cần cung cấp schema riêng trước khi chạy backend.
 
 ## Cấu hình
 
@@ -79,7 +82,14 @@ Frontend đọc tùy chọn `VITE_API_URL`, mặc định là `http://localhost:
 
 ## Bắt đầu
 
-1. Cài Java 21, Node.js/npm và PostgreSQL; tạo cơ sở dữ liệu rồi chạy schema được cung cấp cùng workspace. Đảm bảo URL và tài khoản cơ sở dữ liệu khớp với biến môi trường backend.
+1. Cài Java 21, Node.js/npm và PostgreSQL; tạo cơ sở dữ liệu, sau đó áp dụng `script.sql` được cung cấp cùng workspace:
+
+   ```powershell
+   Set-Location Otech
+   psql -h localhost -U postgres -d Otech -f ..\script.sql
+   ```
+
+   Nếu database đã có dữ liệu, có thể chạy lại **toàn bộ** `script.sql` trên đúng database. Các bảng, kiểu enum, cột bổ sung và index dùng `IF NOT EXISTS`; seed mẫu có xử lý xung đột hoặc kiểm tra trước khi thêm để tránh nhân bản. Phần cập nhật chat tạo `messages.client_message_id` nếu chưa có; đây là thay đổi additive, không xóa hay sửa tin nhắn hiện có. Không dùng bản `script.sql` cũ vì bản đó chưa tạo cột này. Đảm bảo URL và tài khoản cơ sở dữ liệu khớp với backend.
 2. Mở PowerShell tại thư mục gốc `Otech`, cấu hình các biến môi trường backend ở trên. Cần SMTP để dùng đăng ký xác minh email/khôi phục mật khẩu; cần Cloudinary để tải ảnh đại diện.
 3. Khởi động backend:
 
@@ -114,8 +124,35 @@ Các endpoint dùng tiền tố `/api`.
 | `POST` | `/auth/forgot-password` | Công khai | Yêu cầu mã khôi phục mật khẩu |
 | `POST` | `/auth/reset-password` | Công khai | Đặt lại mật khẩu bằng mã |
 | `GET` | `/posts` | Công khai | Lấy danh sách bài đăng hiển thị |
+| `GET` | `/profiles/{userId}` | Công khai | Hồ sơ thành viên, bài đăng và số liệu follow |
+| `POST`, `DELETE` | `/profiles/{userId}/follow` | Đã xác thực | Theo dõi hoặc bỏ theo dõi thành viên |
 | `PATCH` | `/user/profile` | Đã xác thực | Cập nhật hồ sơ, có thể đổi mật khẩu |
 | `POST` | `/user/profile/avatar` | Đã xác thực | Tải ảnh lên bằng multipart field `file` |
+| `GET` | `/categories` | Công khai | Danh mục sản phẩm |
+| `GET` | `/products` | Công khai | Tìm kiếm, lọc, sắp xếp và phân trang tin |
+| `GET` | `/products/{productId}` | Công khai | Chi tiết tin đang bán hoặc đã bán |
+| `GET` | `/user/products` | Đã xác thực | Danh sách tin của người dùng hiện tại |
+| `POST` | `/products` | Đã xác thực | Đăng tin sản phẩm |
+| `PUT` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Cập nhật nội dung và ảnh; thay thế toàn bộ request |
+| `PATCH` | `/products/{productId}/status` | Chủ tin hoặc Manager/Admin | Chuyển trạng thái `SELLING`, `SOLD` hoặc `HIDDEN` |
+| `DELETE` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Lưu trữ tin bằng trạng thái `HIDDEN`, giữ lịch sử chat |
+| `POST` | `/products/images` | Đã xác thực | Tải JPEG/PNG/WebP tối đa 8 MB; cần cấu hình Cloudinary |
+| `GET`, `POST` | `/conversations` | Đã xác thực | Liệt kê hội thoại hoặc tạo/lấy hội thoại trực tiếp |
+| `GET` | `/conversations/{id}/messages` | Thành viên hội thoại | Lịch sử tin nhắn, phân trang cursor và tự đánh dấu đã đọc |
+| `POST` | `/conversations/{id}/messages` | Thành viên hội thoại | Gửi tin dự phòng qua HTTP; gửi lại cùng `clientMessageId` không tạo bản sao |
+| `POST` | `/conversations/{id}/read` | Thành viên hội thoại | Đánh dấu tin đến là đã đọc |
+
+`GET /products` nhận `search`, `categoryId`, `minPrice`, `maxPrice`, `condition`, `location`, `status`, `sort`, `cursor` và `limit` (tối đa 48). `sort` cho phép `newest`, `oldest`, `price-asc`, `price-desc`; mặc định chỉ trả `SELLING`, còn tin `HIDDEN` không xuất hiện công khai. Kết quả có dạng `{ "items": [...], "hasMore": true, "nextCursor": "..." }`; dùng cursor trả về cho trang tiếp theo.
+
+## Chat WebSocket
+
+Backend mở STOMP endpoint tại `/ws` (WebSocket thuần, không dùng token trong URL). Gửi JWT ở STOMP `CONNECT` native header `Authorization: Bearer <JWT>`, sau đó:
+
+- Subscribe `/user/queue/messages`, `/user/queue/message-status` và `/user/queue/errors`.
+- Gửi tin đến `/app/conversations/{conversationId}/messages` với `{ "clientMessageId": "<UUID>", "content": "..." }`.
+- Đánh dấu đã đọc bằng `/app/conversations/{conversationId}/read`.
+
+Mọi thao tác đều xác minh thành viên hội thoại ở backend; chỉ origin trong `CORS_ALLOWED_ORIGINS` được bắt tay WebSocket. Lỗi API dùng envelope `{ "error": { "code", "message", "details" } }`. Simple broker phù hợp cho local/một backend instance; nếu chạy nhiều instance cần thay bằng broker relay dùng chung.
 
 Request cần xác thực gửi header `Authorization: Bearer <token>`. Frontend lưu token trong `localStorage` và gửi qua API helper dùng chung.
 
@@ -134,7 +171,7 @@ Chạy backend trong thư mục `backend/otech/`:
 .\mvnw.cmd test
 ```
 
-Backend có unit test cho auth, email, post, profile và JWT, cùng một kiểm thử khởi động ứng dụng. Kiểm thử frontend, API độc lập, E2E và báo cáo coverage chưa được cấu hình. Lệnh lint hiện chưa đạt; xem mục Nợ kỹ thuật.
+Backend có unit test cho auth, email, post, profile, JWT, marketplace, chat và một kiểm thử khởi động ứng dụng. Kiểm thử frontend, API độc lập, E2E và báo cáo coverage chưa được cấu hình. Lệnh lint toàn dự án vẫn có một số lỗi có sẵn trong source cũ; các file frontend thay đổi được lint riêng khi kiểm tra.
 
 ## Triển khai
 
@@ -170,12 +207,11 @@ Danh sách dưới đây sắp xếp các việc cần xử lý theo mức độ
 | --- | --- | --- | --- |
 | P0 | **Credential trong cấu hình:** `application.properties` có giá trị mặc định giống thông tin xác thực SMTP/Cloudinary và khóa JWT phát triển. | Thu hồi/đổi credential còn hiệu lực; bỏ secret khỏi giá trị mặc định; cấp secret qua secret manager hoặc biến môi trường riêng cho từng môi trường. | Secret scan không còn credential; ứng dụng khởi động với secret cấu hình từ môi trường; không dùng chung khóa giữa local/staging/production. |
 | P0 | **Schema không nằm trong repository:** `script.sql` ở ngoài repo; Hibernate không tự tạo schema. | Đưa schema vào repository hoặc bổ sung công cụ migration có version; thêm hướng dẫn tạo database sạch. | Một contributor clone mới có thể tạo schema và chạy test/integration setup mà không cần file ngoài workspace. |
-| P1 | **Lint frontend chưa đạt:** lần kiểm tra hiện tại `npm run lint` báo 45 lỗi và 4 cảnh báo; ESLint quét cả `frontend/dev-dist` cùng một số file source có lỗi. | Loại trừ artifact sinh tự động khỏi phạm vi lint; sửa các lỗi lint trong source; giữ lệnh lint trong CI. | `npm run lint` chạy thành công trên source; CI chặn merge khi lint thất bại. |
+| P1 | **Lint frontend chưa đạt:** source cũ còn lỗi Fast Refresh và hook; thư mục `dev-dist` là output PWA sinh tự động. | Loại trừ artifact sinh tự động khỏi phạm vi lint; sửa các lỗi lint còn lại trong source; giữ lệnh lint trong CI. | `npm run lint` chạy thành công trên source; CI chặn merge khi lint thất bại. |
 | P1 | **Thiếu kiểm thử giao diện và tích hợp:** backend có unit test nhưng chưa có kiểm thử frontend, API/E2E hoặc báo cáo coverage. | Bổ sung kiểm thử API cho auth/profile/posts; thêm E2E cho luồng người dùng chính; cấu hình thu thập coverage và kiểm thử trường hợp lỗi/biên. | Các luồng chính được kiểm tra tự động; pipeline tạo báo cáo coverage và đạt ngưỡng do nhóm thống nhất. |
-| P1 | **Chức năng marketplace chưa hoàn chỉnh:** chưa có API CRUD sản phẩm, tìm kiếm/lọc, chat, tương tác bài đăng, Page, thông báo và xử lý báo cáo/quản trị; một số UI chỉ đổi state cục bộ hoặc giữ chỗ. | Chốt phạm vi release; với từng user story, bổ sung acceptance criteria, API/UI, kiểm thử và cập nhật tài liệu; ẩn hoặc vô hiệu hóa phần chưa hỗ trợ. | 100% tính năng đã cam kết có acceptance criteria, luồng backend/frontend, kiểm thử và tài liệu tương ứng. |
+| P1 | **Các miền ngoài marketplace/chat chưa hoàn chỉnh:** tương tác bài đăng, Page, thông báo, báo cáo và quản trị vẫn thiếu API/UI đầy đủ; có khu vực cũ chỉ đổi state cục bộ hoặc giữ chỗ. | Với từng user story còn lại, bổ sung acceptance criteria, API/UI, kiểm thử và cập nhật tài liệu; ẩn hoặc vô hiệu hóa phần chưa hỗ trợ. | 100% tính năng đã cam kết có acceptance criteria, luồng backend/frontend, kiểm thử và tài liệu tương ứng. |
 | P1 | **Chưa có quy trình CI/CD và phát hành:** không tìm thấy workflow CI, Docker, security scan, staging, rollback hay monitoring. | Tạo pipeline build, lint, static/security analysis, test và đóng gói; cấu hình secret management; bổ sung quy trình phát hành, rollback, health check, log và cảnh báo. | Pipeline xanh ổn định; có hướng dẫn staging/production đã chạy thử, version phát hành và rollback được kiểm chứng. |
 | P1 | **Giới hạn mở rộng của khóa đăng nhập:** bộ đếm thất bại trong `ConcurrentHashMap` của `AuthService`, chỉ tồn tại trong một tiến trình và mất khi restart. | Chuyển trạng thái khóa sang kho dùng chung có thời hạn hoặc giới hạn triển khai ở một instance và ghi rõ giới hạn đó. | Hành vi khóa nhất quán qua nhiều instance/restart, hoặc kiến trúc single-instance được xác nhận và có biện pháp vận hành phù hợp. |
 | P2 | **Thiếu tài liệu kiến trúc và dữ liệu:** chưa có đầy đủ sơ đồ nghiệp vụ, ngữ cảnh, thành phần, ERD và trình tự; chưa có từ điển dữ liệu, yêu cầu phi chức năng đo được và quyết định kiến trúc. | Bổ sung tài liệu cho các luồng và mô hình dữ liệu đang hoạt động; ghi lại lý do cho quyết định ảnh hưởng cấu trúc hệ thống. | Người tiếp nhận có thể lần theo luồng chính, hiểu schema và tra cứu lý do của quyết định kiến trúc. |
 
 P0/P1/P2 là thứ tự ưu tiên đề xuất. Nhóm phát triển cần phân công người phụ trách và mốc thời gian cho từng hạng mục trong công cụ quản lý công việc.
-
