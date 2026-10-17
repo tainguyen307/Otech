@@ -30,6 +30,7 @@ class PostServiceTest {
     void listPostsMapsAnAuthoredPostToThePublicResponse() {
         UUID postId = UUID.randomUUID();
         User author = new User();
+        author.setId(UUID.randomUUID());
         author.setFullName("Ada Lovelace");
         author.setEmail("ada@example.com");
         author.setAvatarUrl("https://example.com/ada.png");
@@ -46,6 +47,7 @@ class PostServiceTest {
         assertEquals(1, result.size());
         PostResponse response = result.getFirst();
         assertEquals(postId, response.id());
+        assertEquals(author.getId(), response.authorId());
         assertEquals("Ada Lovelace", response.name());
         assertEquals("@ada", response.handle());
         assertEquals("15 min ago", response.time());
