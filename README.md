@@ -33,6 +33,7 @@ flowchart LR
    Frontend[React/Vite<br/>Local: localhost:5173<br/>Triển khai: static host HTTPS, thư mục dist]
    Backend[Spring Boot REST API<br/>Local: localhost:8080<br/>Production: chưa cấu hình]
    Database[(PostgreSQL<br/>Local: localhost:5432<br/>Production: dịch vụ quản lý, dự kiến)]
+   Redis[(Redis<br/>Local: localhost:6379)]
    Mail[SMTP]
    Images[Cloudinary<br/>tùy chọn, dùng cho ảnh đại diện]
 
@@ -40,6 +41,7 @@ flowchart LR
    Browser -->|REST /api, bearer JWT| Backend
    Frontend -. cấu hình VITE_API_URL .-> Backend
    Backend -->|JDBC| Database
+   Backend -->|Bộ đếm rate limit đăng nhập| Redis
    Backend -->|Mã xác minh và khôi phục| Mail
    Backend -. tải ảnh .-> Images
 ```
@@ -51,6 +53,7 @@ Frontend và backend là hai tiến trình riêng. Khi triển khai, cần cấu
 - Java 21 và Maven Wrapper
 - Node.js và npm
 - PostgreSQL
+- Redis để lưu bộ đếm đăng nhập sai và trạng thái khóa dùng chung giữa các instance API
 - SMTP để gửi mã xác minh và khôi phục mật khẩu
 - Cloudinary để bật tải ảnh đại diện
 
@@ -64,6 +67,7 @@ Backend đọc các biến môi trường sau. Hãy cấu hình chúng trong mô
 | --- | --- | --- |
 | `DB_URL` | JDBC URL của PostgreSQL | `jdbc:postgresql://localhost:5432/Otech` |
 | `DB_USERNAME`, `DB_PASSWORD` | Tài khoản cơ sở dữ liệu | Có giá trị dự phòng cục bộ; cần đặt tường minh |
+| `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Kết nối Redis cho rate limit đăng nhập | `localhost`, `6379`, không mật khẩu |
 | `JWT_SECRET` | Khóa ký JWT | Dùng khóa riêng, tối thiểu 32 byte |
 | `JWT_EXPIRATION_MS` | Thời hạn JWT, mili giây | `86400000` |
 | `SERVER_PORT` | Cổng API | `8080` |
@@ -74,7 +78,7 @@ Backend đọc các biến môi trường sau. Hãy cấu hình chúng trong mô
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện | Cần có để bật tải ảnh |
 | `RESET_TOKEN_EXPIRATION_MINUTES` | Thời hạn mã khôi phục mật khẩu | `30` |
 | `SIGNUP_OTP_EXPIRATION_MINUTES` | Thời hạn mã xác minh đăng ký | `10` |
-| `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | Giới hạn đăng nhập sai | `5` lần, khóa `15` phút |
+| `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | Số lần đăng nhập sai tối đa và thời hạn rate limit | `5` lần trong `15` phút |
 
 Trong `application.properties` hiện còn giá trị dự phòng giống thông tin xác thực cho SMTP/Cloudinary và khóa JWT dành cho phát triển. Hãy coi các giá trị này là đã bị lộ: không dùng khi triển khai, thay bằng biến môi trường và thu hồi/đổi thông tin xác thực nếu chúng còn hiệu lực.
 
@@ -82,7 +86,7 @@ Frontend đọc tùy chọn `VITE_API_URL`, mặc định là `http://localhost:
 
 ## Bắt đầu
 
-1. Cài Java 21, Node.js/npm và PostgreSQL; tạo cơ sở dữ liệu, sau đó áp dụng `script.sql` được cung cấp cùng workspace:
+1. Cài Java 21, Node.js/npm, PostgreSQL và Redis; tạo cơ sở dữ liệu, khởi động Redis tại `localhost:6379` (hoặc cấu hình `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`), sau đó áp dụng `script.sql` được cung cấp cùng workspace:
 
    ```powershell
    Set-Location Otech
@@ -211,7 +215,7 @@ Danh sách dưới đây sắp xếp các việc cần xử lý theo mức độ
 | P1 | **Thiếu kiểm thử giao diện và tích hợp:** backend có unit test nhưng chưa có kiểm thử frontend, API/E2E hoặc báo cáo coverage. | Bổ sung kiểm thử API cho auth/profile/posts; thêm E2E cho luồng người dùng chính; cấu hình thu thập coverage và kiểm thử trường hợp lỗi/biên. | Các luồng chính được kiểm tra tự động; pipeline tạo báo cáo coverage và đạt ngưỡng do nhóm thống nhất. |
 | P1 | **Các miền ngoài marketplace/chat chưa hoàn chỉnh:** tương tác bài đăng, Page, thông báo, báo cáo và quản trị vẫn thiếu API/UI đầy đủ; có khu vực cũ chỉ đổi state cục bộ hoặc giữ chỗ. | Với từng user story còn lại, bổ sung acceptance criteria, API/UI, kiểm thử và cập nhật tài liệu; ẩn hoặc vô hiệu hóa phần chưa hỗ trợ. | 100% tính năng đã cam kết có acceptance criteria, luồng backend/frontend, kiểm thử và tài liệu tương ứng. |
 | P1 | **Chưa có quy trình CI/CD và phát hành:** không tìm thấy workflow CI, Docker, security scan, staging, rollback hay monitoring. | Tạo pipeline build, lint, static/security analysis, test và đóng gói; cấu hình secret management; bổ sung quy trình phát hành, rollback, health check, log và cảnh báo. | Pipeline xanh ổn định; có hướng dẫn staging/production đã chạy thử, version phát hành và rollback được kiểm chứng. |
-| P1 | **Giới hạn mở rộng của khóa đăng nhập:** bộ đếm thất bại trong `ConcurrentHashMap` của `AuthService`, chỉ tồn tại trong một tiến trình và mất khi restart. | Chuyển trạng thái khóa sang kho dùng chung có thời hạn hoặc giới hạn triển khai ở một instance và ghi rõ giới hạn đó. | Hành vi khóa nhất quán qua nhiều instance/restart, hoặc kiến trúc single-instance được xác nhận và có biện pháp vận hành phù hợp. |
+| P1 | **Giới hạn mở rộng của rate limit đăng nhập:** bộ đếm thất bại trước đây nằm trong `ConcurrentHashMap` của `AuthService`, chỉ tồn tại trong một tiến trình và mất khi restart. | Dùng Redis làm bộ đếm dùng chung có thời hạn cho rate limit đăng nhập. | Ngưỡng rate limit được áp dụng nhất quán qua các instance và bộ đếm tự hết hạn. |
 | P2 | **Thiếu tài liệu kiến trúc và dữ liệu:** chưa có đầy đủ sơ đồ nghiệp vụ, ngữ cảnh, thành phần, ERD và trình tự; chưa có từ điển dữ liệu, yêu cầu phi chức năng đo được và quyết định kiến trúc. | Bổ sung tài liệu cho các luồng và mô hình dữ liệu đang hoạt động; ghi lại lý do cho quyết định ảnh hưởng cấu trúc hệ thống. | Người tiếp nhận có thể lần theo luồng chính, hiểu schema và tra cứu lý do của quyết định kiến trúc. |
 
 P0/P1/P2 là thứ tự ưu tiên đề xuất. Nhóm phát triển cần phân công người phụ trách và mốc thời gian cho từng hạng mục trong công cụ quản lý công việc.

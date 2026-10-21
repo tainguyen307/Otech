@@ -7,6 +7,7 @@ import com.vn.otech.auth.dto.RegisterRequest;
 import com.vn.otech.auth.dto.ResetPasswordRequest;
 import com.vn.otech.auth.dto.VerifySignupRequest;
 import com.vn.otech.auth.service.AuthService;
+import com.vn.otech.auth.service.LoginAttemptService;
 import com.vn.otech.notification.email.MailService;
 import com.vn.otech.security.jwt.JwtService;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,6 +54,7 @@ class AuthServiceTest {
     @Mock private JwtService jwtService;
     @Mock private SignupOtpTokenRepository signupOtpTokenRepository;
     @Mock private MailService mailService;
+    @Mock private LoginAttemptService loginAttemptService;
 
     @Test
     void registerNormalizesUserAndIssuesSignupOtp() {
@@ -62,7 +64,7 @@ class AuthServiceTest {
         when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> "hash:" + invocation.getArgument(0));
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        service(5).register(new RegisterRequest("  New User  ", " New@Example.com ", "password123"));
+        service().register(new RegisterRequest("  New User  ", " New@Example.com ", "password123"));
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(userCaptor.capture());
@@ -85,7 +87,7 @@ class AuthServiceTest {
         when(userRepository.existsByEmailIgnoreCase("existing@example.com")).thenReturn(true);
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service(5).register(new RegisterRequest("User", "existing@example.com", "password123")));
+                () -> service().register(new RegisterRequest("User", "existing@example.com", "password123")));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(userRepository, never()).save(any(User.class));
@@ -99,19 +101,21 @@ class AuthServiceTest {
         when(passwordEncoder.matches("password123", "hash:password123")).thenReturn(true);
         when(jwtService.generateToken(any(), any(UUID.class))).thenReturn("jwt-token");
 
-        AuthResponse response = service(5).authenticate(new AuthRequest(" User@Example.com ", "password123"));
+        AuthResponse response = service().authenticate(new AuthRequest(" User@Example.com ", "password123"));
 
         assertEquals("jwt-token", response.token());
         assertEquals(user.getId().toString(), response.userId());
         assertEquals("user@example.com", response.email());
         assertEquals("USER", response.role());
         assertTrue(response.authorities().contains("ROLE_USER"));
+        verify(loginAttemptService).clearFailures("user@example.com");
     }
 
     @Test
     void authenticateLocksAfterConfiguredFailedAttempts() {
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.empty());
-        AuthService authService = service(2);
+        when(loginAttemptService.isRateLimited("user@example.com")).thenReturn(false, false, true);
+        AuthService authService = service();
 
         assertThrows(BadCredentialsException.class,
                 () -> authService.authenticate(new AuthRequest("user@example.com", "wrong")));
@@ -121,6 +125,7 @@ class AuthServiceTest {
                 () -> authService.authenticate(new AuthRequest("user@example.com", "wrong")));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, exception.getStatusCode());
+        verify(loginAttemptService, org.mockito.Mockito.times(2)).recordFailure("user@example.com");
     }
 
     @Test
@@ -136,7 +141,7 @@ class AuthServiceTest {
         when(passwordEncoder.matches("123456", "hash:123456")).thenReturn(true);
         when(jwtService.generateToken(any(), any(UUID.class))).thenReturn("jwt-token");
 
-        AuthResponse response = service(5).verifySignup(new VerifySignupRequest("user@example.com", "123456"));
+        AuthResponse response = service().verifySignup(new VerifySignupRequest("user@example.com", "123456"));
 
         assertTrue(user.isEmailVerified());
         assertNotNull(token.getUsedAt());
@@ -157,7 +162,7 @@ class AuthServiceTest {
                 .thenReturn(Optional.of(token));
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service(5).verifySignup(new VerifySignupRequest("user@example.com", "123456")));
+                () -> service().verifySignup(new VerifySignupRequest("user@example.com", "123456")));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
         verify(userRepository, never()).save(user);
@@ -169,7 +174,7 @@ class AuthServiceTest {
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.encode(anyString())).thenAnswer(invocation -> "hash:" + invocation.getArgument(0));
 
-        service(5).resendSignupOtp(" User@Example.com ");
+        service().resendSignupOtp(" User@Example.com ");
 
         verify(signupOtpTokenRepository).save(any(SignupOtpToken.class));
         verify(mailService).sendSignupOtp(eq("user@example.com"), anyString());
@@ -182,7 +187,7 @@ class AuthServiceTest {
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service(5).resendSignupOtp("user@example.com"));
+                () -> service().resendSignupOtp("user@example.com"));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(mailService, never()).sendSignupOtp(anyString(), anyString());
@@ -198,7 +203,7 @@ class AuthServiceTest {
         when(resetTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(token));
         when(passwordEncoder.encode("new-password")).thenReturn("new-hash");
 
-        service(5).resetPassword(new ResetPasswordRequest("raw-token", "new-password"));
+        service().resetPassword(new ResetPasswordRequest("raw-token", "new-password"));
 
         assertEquals("new-hash", user.getPasswordHash());
         assertNotNull(token.getUsedAt());
@@ -211,7 +216,7 @@ class AuthServiceTest {
         when(resetTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> service(5).resetPassword(new ResetPasswordRequest("bad-token", "new-password")));
+                () -> service().resetPassword(new ResetPasswordRequest("bad-token", "new-password")));
 
         assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
     }
@@ -220,7 +225,7 @@ class AuthServiceTest {
     void requestPasswordResetDoesNothingForUnknownEmail() {
         when(userRepository.findByEmailIgnoreCase("missing@example.com")).thenReturn(Optional.empty());
 
-        service(5).requestPasswordReset(new ForgotPasswordRequest("missing@example.com"));
+        service().requestPasswordReset(new ForgotPasswordRequest("missing@example.com"));
 
         verify(resetTokenRepository, never()).save(any(PasswordResetToken.class));
         verify(mailService, never()).sendPasswordResetOtp(anyString(), anyString());
@@ -231,15 +236,15 @@ class AuthServiceTest {
         User user = user();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
 
-        service(5).requestPasswordReset(new ForgotPasswordRequest("user@example.com"));
+        service().requestPasswordReset(new ForgotPasswordRequest("user@example.com"));
 
         verify(resetTokenRepository).save(any(PasswordResetToken.class));
         verify(mailService).sendPasswordResetOtp(eq("user@example.com"), anyString());
     }
 
-    private AuthService service(int maxFailures) {
+    private AuthService service() {
         return new AuthService(userRepository, roleRepository, resetTokenRepository, passwordEncoder, jwtService,
-                30, signupOtpTokenRepository, mailService, 10, maxFailures, 15);
+                30, signupOtpTokenRepository, mailService, 10, loginAttemptService);
     }
 
     private User user() {
