@@ -48,7 +48,12 @@ export default function AuthScreen({ initialMode = 'signIn', onClose, onSignedIn
       const response = await apiFetch(path, { method: 'POST', body: JSON.stringify(payload) })
       const body = await response.json().catch(() => ({}))
       if (!response.ok) {
-        const responseMessage = body.message || body.error || ''
+        const apiError = body.error && typeof body.error === 'object' ? body.error : {}
+        const fieldMessages = Array.isArray(apiError.details)
+          ? apiError.details.map(({ field, message: fieldMessage }) => `${field}: ${fieldMessage}`).join('; ')
+          : ''
+        const responseMessage = fieldMessages || apiError.message || body.message
+          || (typeof body.error === 'string' ? body.error : '')
         if (responseMessage.includes('signup_otp_tokens') || responseMessage.includes('relation')) {
           throw new Error('Signup is temporarily unavailable')
         }
@@ -79,7 +84,7 @@ export default function AuthScreen({ initialMode = 'signIn', onClose, onSignedIn
         {(mode !== 'reset') && <Field label="Email" icon={Mail} type="email" value={email} onChange={(event) => setEmail(event.target.value)} required placeholder="you@example.com" />}
         {mode === 'verify' && <><Field label="Verification code" icon={KeyRound} inputMode="numeric" pattern="[0-9]{6}" maxLength="6" value={otp} onChange={(event) => setOtp(event.target.value)} required placeholder="6 digits" /><button type="button" onClick={async () => { setError(''); setMessage(''); try { const response = await apiFetch('/auth/resend-signup-otp', { method: 'POST', body: JSON.stringify({ email }) }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.message || 'Could not resend code'); setMessage('A new verification code was sent.') } catch (requestError) { showError(requestError) } }} className="text-xs font-bold text-[#087cf5] hover:underline">Resend verification code</button></>}
         {isReset && <Field label="Reset code" icon={KeyRound} inputMode="numeric" pattern="[0-9]{6}" maxLength="6" value={resetToken} onChange={(event) => setResetToken(event.target.value)} required placeholder="Enter the 6-digit code" />}
-        {['signIn', 'signUp', 'reset'].includes(mode) && <Field label={isReset ? 'New password' : 'Password'} icon={LockKeyhole} type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="At least 8 characters" />}
+        {['signIn', 'signUp', 'reset'].includes(mode) && <Field label={isReset ? 'New password' : 'Password'} icon={LockKeyhole} type="password" minLength="8" value={password} onChange={(event) => setPassword(event.target.value)} required placeholder="8+ chars, upper/lowercase, number & symbol" />}
         {error && <p role="alert" className="text-sm font-semibold text-[#d9485f]">{error}</p>}
         {message && <p className="flex gap-2 text-sm font-semibold text-[#16835b]"><CheckCircle2 size={17} className="mt-0.5 shrink-0" />{message}</p>}
         {mode === 'signIn' && <button type="button" onClick={() => switchMode('forgot')} className="text-xs font-bold text-[#087cf5] hover:underline">Forgot password?</button>}
