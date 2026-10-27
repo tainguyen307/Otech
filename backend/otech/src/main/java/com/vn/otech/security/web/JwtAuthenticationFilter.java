@@ -42,10 +42,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         && SecurityContextHolder.getContext().getAuthentication() == null) {
                     Claims claims = jwtService.parse(token);
                     UserDetails userDetails = userDetailsService.loadUserByUsername(claims.get("email", String.class));
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    if (userDetails.isEnabled() && userDetails.isAccountNonLocked()
+                            && userDetails.isAccountNonExpired() && userDetails.isCredentialsNonExpired()) {
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    } else {
+                        SecurityContextHolder.clearContext();
+                    }
                 }
             } catch (JwtException | IllegalArgumentException ignored) {
                 SecurityContextHolder.clearContext();
