@@ -10,9 +10,11 @@ Otech là ứng dụng cộng đồng và mua bán hàng hóa đã qua sử dụ
 - Mở hồ sơ công khai từ avatar bài đăng, xem bài viết và theo dõi hoặc nhắn tin cho thành viên.
 - Tìm kiếm, lọc, xem chi tiết, đăng và quản lý tin sản phẩm đã qua sử dụng.
 - Nhắn tin theo sản phẩm hoặc trực tiếp; lưu lịch sử, cập nhật realtime và trạng thái đã đọc.
+- Dashboard vận hành cho Manager/Admin: tìm kiếm người dùng, kiểm duyệt sản phẩm/bài viết/Page và xử lý báo cáo.
+- Admin tạo, khóa/mở khóa, vô hiệu hóa Manager và chuyển vai trò giữa User/Manager.
 - Giao diện responsive, hỗ trợ chế độ sáng/tối và cài đặt PWA.
 
-Các luồng marketplace và chat dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Các tính năng tương tác bài viết, Page, thông báo, báo cáo và quản trị vẫn chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
+Các luồng marketplace, chat và dashboard quản trị dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Các tính năng tương tác bài viết, Page và thông báo cho người dùng thông thường chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
 
 ## Cấu trúc dự án
 
@@ -66,23 +68,25 @@ Backend đọc các biến môi trường sau. Hãy cấu hình chúng trong mô
 | Biến | Mục đích | Mặc định / ghi chú |
 | --- | --- | --- |
 | `DB_URL` | JDBC URL của PostgreSQL | `jdbc:postgresql://localhost:5432/Otech` |
-| `DB_USERNAME`, `DB_PASSWORD` | Tài khoản cơ sở dữ liệu | Có giá trị dự phòng cục bộ; cần đặt tường minh |
+| `DB_USERNAME`, `DB_PASSWORD` | Tài khoản cơ sở dữ liệu | Bắt buộc; không có thông tin xác thực mặc định trong source |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Kết nối Redis cho rate limit đăng nhập | `localhost`, `6379`, không mật khẩu |
-| `JWT_SECRET` | Khóa ký JWT | Dùng khóa riêng, tối thiểu 32 byte |
+| `JWT_SECRET` | Khóa ký JWT | Bắt buộc; dùng khóa riêng, ngẫu nhiên, tối thiểu 32 byte |
 | `JWT_EXPIRATION_MS` | Thời hạn JWT, mili giây | `86400000` |
 | `SERVER_PORT` | Cổng API | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Danh sách origin frontend, phân tách bằng dấu phẩy | `http://localhost:5173` |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Kết nối SMTP | Mặc định host Gmail, cổng `587` |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Kết nối SMTP | Host mặc định `smtp.gmail.com`, cổng `587`; cung cấp thông tin đăng nhập qua môi trường khi bật gửi mail |
 | `MAIL_FROM` | Địa chỉ gửi email | Mặc định lấy từ `MAIL_USERNAME` |
 | `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` | Xác thực SMTP và TLS | Mặc định bật |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện | Cần có để bật tải ảnh |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện | Tùy chọn; chỉ bật upload khi cung cấp đủ thông tin qua môi trường |
 | `RESET_TOKEN_EXPIRATION_MINUTES` | Thời hạn mã khôi phục mật khẩu | `30` |
 | `SIGNUP_OTP_EXPIRATION_MINUTES` | Thời hạn mã xác minh đăng ký | `10` |
 | `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | Số lần đăng nhập sai tối đa và thời hạn rate limit | `5` lần trong `15` phút |
 
-Trong `application.properties` hiện còn giá trị dự phòng giống thông tin xác thực cho SMTP/Cloudinary và khóa JWT dành cho phát triển. Hãy coi các giá trị này là đã bị lộ: không dùng khi triển khai, thay bằng biến môi trường và thu hồi/đổi thông tin xác thực nếu chúng còn hiệu lực.
+Source không lưu mật khẩu cơ sở dữ liệu, thông tin đăng nhập SMTP/Cloudinary hoặc khóa JWT. Hãy cấu hình chúng qua biến môi trường; nếu các thông tin từng có trong lịch sử Git còn hiệu lực, hãy thu hồi và thay mới.
 
 Frontend đọc tùy chọn `VITE_API_URL`, mặc định là `http://localhost:8080/api`. File mẫu nằm tại `frontend/.env.example`; có thể tạo `frontend/.env.local` để ghi URL riêng cho máy phát triển.
+
+Các kiểm thử khởi động backend dùng profile `test` với H2 trong bộ nhớ và khóa ký dành riêng cho kiểm thử; chúng không cần credential của môi trường chạy ứng dụng.
 
 ## Bắt đầu
 
@@ -94,7 +98,7 @@ Frontend đọc tùy chọn `VITE_API_URL`, mặc định là `http://localhost:
    ```
 
    Nếu database đã có dữ liệu, có thể chạy lại **toàn bộ** `script.sql` trên đúng database. Các bảng, kiểu enum, cột bổ sung và index dùng `IF NOT EXISTS`; seed mẫu có xử lý xung đột hoặc kiểm tra trước khi thêm để tránh nhân bản. Phần cập nhật chat tạo `messages.client_message_id` nếu chưa có; đây là thay đổi additive, không xóa hay sửa tin nhắn hiện có. Không dùng bản `script.sql` cũ vì bản đó chưa tạo cột này. Đảm bảo URL và tài khoản cơ sở dữ liệu khớp với backend.
-2. Mở PowerShell tại thư mục gốc `Otech`, cấu hình các biến môi trường backend ở trên. Cần SMTP để dùng đăng ký xác minh email/khôi phục mật khẩu; cần Cloudinary để tải ảnh đại diện.
+2. Mở PowerShell tại thư mục gốc `Otech`, đặt `DB_USERNAME`, `DB_PASSWORD` và `JWT_SECRET` trong môi trường chạy backend. Dùng khóa JWT ngẫu nhiên riêng cho từng môi trường (tối thiểu 32 byte). Cấu hình `MAIL_USERNAME`/`MAIL_PASSWORD` để gửi mã xác minh/khôi phục; cấu hình đủ ba biến Cloudinary để tải ảnh. Không ghi các giá trị này vào file được commit.
 3. Khởi động backend:
 
    ```powershell
@@ -145,6 +149,16 @@ Các endpoint dùng tiền tố `/api`.
 | `GET` | `/conversations/{id}/messages` | Thành viên hội thoại | Lịch sử tin nhắn, phân trang cursor và tự đánh dấu đã đọc |
 | `POST` | `/conversations/{id}/messages` | Thành viên hội thoại | Gửi tin dự phòng qua HTTP; gửi lại cùng `clientMessageId` không tạo bản sao |
 | `POST` | `/conversations/{id}/read` | Thành viên hội thoại | Đánh dấu tin đến là đã đọc |
+| `GET` | `/manager/dashboard` | Manager/Admin | Thống kê User, sản phẩm, bài viết, Page, báo cáo và Manager |
+| `GET` | `/manager/users`, `/manager/products`, `/manager/posts`, `/manager/pages`, `/manager/reports` | Manager/Admin | Danh sách quản trị có tìm kiếm/lọc; phân trang bằng `page`/`size` (tối đa 100) |
+| `PATCH` | `/manager/users/{id}/status` | Manager/Admin | Khóa/mở khóa tài khoản USER; không sửa tài khoản Manager/Admin |
+| `PATCH` | `/manager/products/{id}/visibility`, `/manager/posts/{id}/visibility`, `/manager/pages/{id}/visibility` | Manager/Admin | Ẩn/hiện nội dung; sản phẩm đã bán không thể khôi phục thành đang bán |
+| `PATCH` | `/manager/reports/{id}` | Manager/Admin | Chấp nhận báo cáo để ẩn/khóa đối tượng hoặc từ chối; chỉ xử lý báo cáo đang chờ |
+| `POST` | `/admin/managers` | Admin | Tạo tài khoản Manager đã xác minh email |
+| `PATCH`, `DELETE` | `/admin/managers/{id}` và `/admin/managers/{id}/status` | Admin | Đổi trạng thái Manager hoặc vô hiệu hóa tài khoản (xóa mềm) |
+| `PATCH` | `/admin/users/{id}/role` | Admin | Chuyển vai trò USER↔MANAGER; không cấp hoặc sửa vai trò Admin |
+
+Dashboard dùng chung tại `/manager` cho Manager và `/admin` cho Admin. Manager chỉ vận hành User/nội dung/báo cáo; Admin có thêm tab quản lý Manager và thay đổi vai trò. Các thao tác quản trị được kiểm tra tại backend; khóa tài khoản cũng vô hiệu hóa JWT đang còn hạn.
 
 `GET /products` nhận `search`, `categoryId`, `minPrice`, `maxPrice`, `condition`, `location`, `status`, `sort`, `cursor` và `limit` (tối đa 48). `sort` cho phép `newest`, `oldest`, `price-asc`, `price-desc`; mặc định chỉ trả `SELLING`, còn tin `HIDDEN` không xuất hiện công khai. Kết quả có dạng `{ "items": [...], "hasMore": true, "nextCursor": "..." }`; dùng cursor trả về cho trang tiếp theo.
 
@@ -209,7 +223,7 @@ Danh sách dưới đây sắp xếp các việc cần xử lý theo mức độ
 
 | Ưu tiên | Nợ kỹ thuật | Kế hoạch xử lý | Điều kiện hoàn tất |
 | --- | --- | --- | --- |
-| P0 | **Credential trong cấu hình:** `application.properties` có giá trị mặc định giống thông tin xác thực SMTP/Cloudinary và khóa JWT phát triển. | Thu hồi/đổi credential còn hiệu lực; bỏ secret khỏi giá trị mặc định; cấp secret qua secret manager hoặc biến môi trường riêng cho từng môi trường. | Secret scan không còn credential; ứng dụng khởi động với secret cấu hình từ môi trường; không dùng chung khóa giữa local/staging/production. |
+| P0 | **Credential từng được commit:** cấu hình hiện không còn giá trị bí mật mặc định, nhưng credential từng xuất hiện trong lịch sử Git có thể vẫn còn hiệu lực. | Thu hồi/đổi các credential SMTP/Cloudinary và khóa JWT từng commit; giữ secret ngoài Git và cấp qua biến môi trường/secret manager riêng cho từng môi trường. | Credential cũ đã được thu hồi; source và cấu hình triển khai không chứa secret; mỗi môi trường dùng khóa riêng. |
 | P0 | **Schema không nằm trong repository:** `script.sql` ở ngoài repo; Hibernate không tự tạo schema. | Đưa schema vào repository hoặc bổ sung công cụ migration có version; thêm hướng dẫn tạo database sạch. | Một contributor clone mới có thể tạo schema và chạy test/integration setup mà không cần file ngoài workspace. |
 | P1 | **Lint frontend chưa đạt:** source cũ còn lỗi Fast Refresh và hook; thư mục `dev-dist` là output PWA sinh tự động. | Loại trừ artifact sinh tự động khỏi phạm vi lint; sửa các lỗi lint còn lại trong source; giữ lệnh lint trong CI. | `npm run lint` chạy thành công trên source; CI chặn merge khi lint thất bại. |
 | P1 | **Thiếu kiểm thử giao diện và tích hợp:** backend có unit test nhưng chưa có kiểm thử frontend, API/E2E hoặc báo cáo coverage. | Bổ sung kiểm thử API cho auth/profile/posts; thêm E2E cho luồng người dùng chính; cấu hình thu thập coverage và kiểm thử trường hợp lỗi/biên. | Các luồng chính được kiểm tra tự động; pipeline tạo báo cáo coverage và đạt ngưỡng do nhóm thống nhất. |

@@ -1,16 +1,5 @@
-import { Home, LayoutGrid, LogIn, MessageCircle, ShieldCheck, Sparkles } from 'lucide-react'
+import { LogIn, Sparkles } from 'lucide-react'
 import Logo from './Logo'
-
-export const navItems = [
-  { label: 'Home', icon: Home },
-  { label: 'Marketplace', icon: LayoutGrid },
-  { label: 'Messages', icon: MessageCircle, requiresAuth: true },
-  { label: 'Admin', icon: ShieldCheck, requiresAuth: true, roles: ['ADMIN'] },
-]
-
-export function visibleNavItems(user) {
-  return navItems.filter((item) => !item.roles || item.roles.includes(user?.role))
-}
 
 export function NavButton({ item, active, onClick, mobile = false }) {
   const Icon = item.icon
