@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import Header from './components/Header'
-import { DesktopSidebar, NavButton, visibleNavItems } from './components/Navigation'
+import { DesktopSidebar, NavButton } from './components/Navigation'
+import { visibleNavItems } from './components/navigationItems'
 import HomeScreen from './screens/HomeScreen'
 import MarketplaceScreen from './screens/MarketplaceScreen'
 import MessagesScreen from './screens/MessagesScreen'
 import AuthScreen from './screens/AuthScreen'
 import ProfileScreen from './screens/ProfileScreen'
 import PublicProfileScreen from './screens/PublicProfileScreen'
+import ManagementDashboard from './screens/ManagementDashboard'
 import { useAuth } from './auth/AuthContext.jsx'
+import { hasRole } from './auth/roles.js'
 import { apiErrorMessage, apiFetch } from './lib/api'
 
 function routeFromLocation() {
@@ -23,7 +26,7 @@ function routeFromLocation() {
   if (profileMatch) {
     return { activeNav: 'Profile', profileUserId: decodeURIComponent(profileMatch[1]), conversationId: '' }
   }
-  if (path === '/admin') return { activeNav: 'Admin', profileUserId: null, conversationId: '' }
+  if (path === '/admin' || path === '/manager') return { activeNav: 'Management', profileUserId: null, conversationId: '' }
   return { activeNav: 'Home', profileUserId: null, conversationId: '' }
 }
 
@@ -63,7 +66,13 @@ function App() {
       requireAuth()
       return
     }
-    const paths = { Home: '/', Marketplace: '/marketplace', Messages: '/messages', Profile: '/profile', Admin: '/admin' }
+    const paths = {
+      Home: '/',
+      Marketplace: '/marketplace',
+      Messages: '/messages',
+      Profile: '/profile',
+      Management: user?.role === 'ADMIN' ? '/admin' : '/manager',
+    }
     navigateTo(paths[item.label] || '/')
   }
   const handleOpenProfile = (profileId) => {
@@ -103,6 +112,8 @@ function App() {
     {activeNav === 'Profile' && profileUserId && <PublicProfileScreen key={profileUserId} userId={profileUserId} currentUser={user} onBack={() => navigateTo('/')} onAuth={requireAuth} onMessage={handleStartDirectConversation} />}
     {activeNav === 'Profile' && !profileUserId && user && <ProfileScreen user={user} onUpdateUser={updateUser} onSignOut={() => { signOut(); navigateTo('/') }} />}
     {activeNav === 'Profile' && !profileUserId && !user && <main className="px-5 py-16 text-center lg:ml-[248px]"><h1 className="text-2xl font-extrabold">Sign in to view your profile</h1><button onClick={requireAuth} className="mt-4 rounded-xl bg-[#087cf5] px-4 py-3 text-sm font-bold text-white">Sign in</button></main>}
+    {activeNav === 'Management' && hasRole(user, 'MANAGER', 'ADMIN') && <ManagementDashboard user={user} />}
+    {activeNav === 'Management' && !hasRole(user, 'MANAGER', 'ADMIN') && <main className="px-5 py-16 text-center lg:ml-[248px]"><h1 className="text-2xl font-extrabold">Management access required</h1><p className="mt-2 text-sm text-slate-500">Sign in with a manager or admin account to continue.</p>{!user && <button onClick={requireAuth} className="mt-4 rounded-xl bg-[#087cf5] px-4 py-3 text-sm font-bold text-white">Sign in</button>}</main>}
     <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around border-t border-[#e3e8f0] bg-white px-3 py-3 lg:hidden">{navigationItems.slice(0, 4).map((item) => <NavButton key={item.label} item={item} active={activeNav === item.label} onClick={() => handleNavigate(item)} mobile />)}</nav>
     {authMode && <AuthScreen initialMode={authMode} onClose={() => setAuthMode(null)} onSignedIn={(response) => { signIn(response); setAuthMode(null) }} />}
   </div>
