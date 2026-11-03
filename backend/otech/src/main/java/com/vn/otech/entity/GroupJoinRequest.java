@@ -7,11 +7,11 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "page_join_requests")
+@Table(name = "group_join_requests")
 @Getter @Setter @NoArgsConstructor
-public class PageJoinRequest {
+public class GroupJoinRequest {
     @Id @GeneratedValue private UUID id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "page_id") private Page page;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "group_id") private Group group;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "user_id") private User user;
     @Column(length = 20) private String status = "PENDING";
 }

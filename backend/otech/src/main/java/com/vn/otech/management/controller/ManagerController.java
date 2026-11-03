@@ -8,7 +8,7 @@ import com.vn.otech.management.dto.AccountStatusRequest;
 import com.vn.otech.management.dto.ContentVisibilityRequest;
 import com.vn.otech.management.dto.ManagementDashboardSummary;
 import com.vn.otech.management.dto.ManagementPage;
-import com.vn.otech.management.dto.ManagedPageResponse;
+import com.vn.otech.management.dto.ManagedGroupResponse;
 import com.vn.otech.management.dto.ManagedPostResponse;
 import com.vn.otech.management.dto.ManagedProductResponse;
 import com.vn.otech.management.dto.ManagedReportResponse;
@@ -92,19 +92,19 @@ public class ManagerController {
         return managementService.updatePostVisibility(postId, request.hidden());
     }
 
-    @GetMapping("/pages")
-    public ManagementPage<ManagedPageResponse> pages(
+    @GetMapping("/groups")
+    public ManagementPage<ManagedGroupResponse> groups(
             @RequestParam(required = false) @Size(max = 120) String search,
             @RequestParam(required = false) Boolean hidden,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return managementService.listPages(search, hidden, page, size);
+        return managementService.listGroups(search, hidden, page, size);
     }
 
-    @PatchMapping("/pages/{pageId}/visibility")
-    public ManagedPageResponse updatePageVisibility(
-            @PathVariable UUID pageId, @Valid @RequestBody ContentVisibilityRequest request) {
-        return managementService.updatePageVisibility(pageId, request.hidden());
+    @PatchMapping("/groups/{groupId}/visibility")
+    public ManagedGroupResponse updateGroupVisibility(
+            @PathVariable UUID groupId, @Valid @RequestBody ContentVisibilityRequest request) {
+        return managementService.updateGroupVisibility(groupId, request.hidden());
     }
 
     @GetMapping("/reports")

@@ -5,16 +5,19 @@ Otech là ứng dụng cộng đồng và mua bán hàng hóa đã qua sử dụ
 ## Tính năng
 
 - Đăng ký tài khoản, xác minh email, đăng nhập và khôi phục mật khẩu.
-- Xem bảng tin bài đăng công khai.
+- Đăng, sửa và ẩn bài viết ở homepage; đính kèm ảnh, like/unlike, bình luận, trả lời và chia sẻ bài viết.
+- Xem bảng tin công khai; khách chỉ xem, còn thao tác đăng và tương tác yêu cầu đăng nhập.
 - Cập nhật hồ sơ, đổi mật khẩu và tải ảnh đại diện.
 - Mở hồ sơ công khai từ avatar bài đăng, xem bài viết và theo dõi hoặc nhắn tin cho thành viên.
 - Tìm kiếm, lọc, xem chi tiết, đăng và quản lý tin sản phẩm đã qua sử dụng.
 - Nhắn tin theo sản phẩm hoặc trực tiếp; lưu lịch sử, cập nhật realtime và trạng thái đã đọc.
-- Dashboard vận hành cho Manager/Admin: tìm kiếm người dùng, kiểm duyệt sản phẩm/bài viết/Page và xử lý báo cáo.
+- Khám phá nhóm theo danh mục hàng hóa; tạo, sửa, xóa nhóm; tham gia nhóm công khai hoặc gửi yêu cầu vào nhóm riêng tư.
+- Đăng bài trong nhóm, đính kèm ảnh; quản trị viên nhóm có thể bật/tắt duyệt bài, duyệt/từ chối bài viết và yêu cầu tham gia.
+- Dashboard vận hành cho Manager/Admin: tìm kiếm người dùng, kiểm duyệt sản phẩm/bài viết/nhóm cộng đồng và xử lý báo cáo.
 - Admin tạo, khóa/mở khóa, vô hiệu hóa Manager và chuyển vai trò giữa User/Manager.
 - Giao diện responsive, hỗ trợ chế độ sáng/tối và cài đặt PWA.
 
-Các luồng marketplace, chat và dashboard quản trị dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Các tính năng tương tác bài viết, Page và thông báo cho người dùng thông thường chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
+Các luồng bài viết, marketplace, chat, nhóm và dashboard quản trị dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Nhóm được lưu trong bảng `groups` và dùng API `/api/groups`. Thông báo cho người dùng thông thường chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
 
 ## Cấu trúc dự án
 
@@ -59,7 +62,7 @@ Frontend và backend là hai tiến trình riêng. Khi triển khai, cần cấu
 - SMTP để gửi mã xác minh và khôi phục mật khẩu
 - Cloudinary để bật tải ảnh đại diện
 
-Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. File `script.sql` nằm ở thư mục cha của repository trong workspace, không được Git của repository Otech theo dõi; file này chứa schema nền cùng phần bổ sung marketplace/chat dạng additive. Khi clone repository độc lập, cần cung cấp schema riêng trước khi chạy backend.
+Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. Toàn bộ thay đổi database, gồm bảng `post_shares`, được quản lý trong file `script.sql` ở thư mục cha của repository. Chạy file này trong pgAdmin hoặc psql để cập nhật database hiện tại. Với database cũ, script đổi tên các bảng và enum `page` sang `group` mà không xóa dữ liệu; có thể chạy riêng `migrate_pages_to_groups.sql` trước khi triển khai code mới. Luồng nhóm hỗ trợ danh mục hàng hóa (`category_id`) và trạng thái/cấu hình duyệt bài.
 
 ## Cấu hình
 
@@ -77,12 +80,14 @@ Backend đọc các biến môi trường sau. Hãy cấu hình chúng trong mô
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Kết nối SMTP | Host mặc định `smtp.gmail.com`, cổng `587`; cung cấp thông tin đăng nhập qua môi trường khi bật gửi mail |
 | `MAIL_FROM` | Địa chỉ gửi email | Mặc định lấy từ `MAIL_USERNAME` |
 | `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` | Xác thực SMTP và TLS | Mặc định bật |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện | Tùy chọn; chỉ bật upload khi cung cấp đủ thông tin qua môi trường |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện, ảnh bài viết và tin sản phẩm | Tùy chọn; lấy đúng ba giá trị từ Cloudinary Dashboard, chỉ bật upload khi cung cấp đủ thông tin qua môi trường |
 | `RESET_TOKEN_EXPIRATION_MINUTES` | Thời hạn mã khôi phục mật khẩu | `30` |
 | `SIGNUP_OTP_EXPIRATION_MINUTES` | Thời hạn mã xác minh đăng ký | `10` |
 | `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | Số lần đăng nhập sai tối đa và thời hạn rate limit | `5` lần trong `15` phút |
 
-Source không lưu mật khẩu cơ sở dữ liệu, thông tin đăng nhập SMTP/Cloudinary hoặc khóa JWT. Hãy cấu hình chúng qua biến môi trường; nếu các thông tin từng có trong lịch sử Git còn hiệu lực, hãy thu hồi và thay mới.
+Source không lưu mật khẩu cơ sở dữ liệu, thông tin đăng nhập SMTP/Cloudinary hoặc khóa JWT. Hãy cấu hình chúng qua biến môi trường; API key phải đi cùng API secret thuộc cùng một Cloudinary account. Nếu Cloudinary trả lỗi `Invalid Signature`, kiểm tra lại Cloud name, API Key và API Secret trong Cloudinary Dashboard, sau đó khởi động lại backend. Không dùng `.env` của frontend để cấu hình backend. Nếu credential từng được lưu trong lịch sử Git còn hiệu lực, hãy thu hồi và thay mới.
+
+Để cấu hình upload local, sao chép `backend/otech/.env.example` thành `backend/otech/.env`, điền Cloud name, API key và API secret từ cùng một Cloudinary account rồi khởi động backend với working directory `backend/otech`. `.env` đã được Git bỏ qua. Có thể thay bằng ba biến môi trường tương ứng; backend phải được khởi động lại sau khi cập nhật cấu hình.
 
 Frontend đọc tùy chọn `VITE_API_URL`, mặc định là `http://localhost:8080/api`. File mẫu nằm tại `frontend/.env.example`; có thể tạo `frontend/.env.local` để ghi URL riêng cho máy phát triển.
 
@@ -131,7 +136,12 @@ Các endpoint dùng tiền tố `/api`.
 | `POST` | `/auth/logout` | Công khai; nhận bearer token nếu có | Thu hồi token hiện tại khi token được gửi |
 | `POST` | `/auth/forgot-password` | Công khai | Yêu cầu mã khôi phục mật khẩu |
 | `POST` | `/auth/reset-password` | Công khai | Đặt lại mật khẩu bằng mã |
-| `GET` | `/posts` | Công khai | Lấy danh sách bài đăng hiển thị |
+| `GET` | `/posts` | Công khai | Lấy feed; gồm số like/bình luận/chia sẻ và trạng thái like của người xem đã đăng nhập |
+| `POST` | `/posts` | Đã xác thực | Tạo bài viết văn bản, kèm tối đa một ảnh HTTPS tùy chọn |
+| `PUT`, `DELETE` | `/posts/{postId}` | Chủ bài viết | Sửa bài viết hoặc ẩn bài viết của mình |
+| `PUT`, `DELETE` | `/posts/{postId}/likes` | Đã xác thực | Like/unlike idempotent |
+| `GET`, `POST` | `/posts/{postId}/comments` | Đọc công khai; tạo yêu cầu đăng nhập | Bình luận hoặc trả lời bình luận bằng `parentCommentId` |
+| `PUT` | `/posts/{postId}/shares` | Đã xác thực | Chia sẻ bài viết; mỗi người dùng được tính tối đa một lượt cho mỗi bài |
 | `GET` | `/profiles/{userId}` | Công khai | Hồ sơ thành viên, bài đăng và số liệu follow |
 | `POST`, `DELETE` | `/profiles/{userId}/follow` | Đã xác thực | Theo dõi hoặc bỏ theo dõi thành viên |
 | `PATCH` | `/user/profile` | Đã xác thực | Cập nhật hồ sơ, có thể đổi mật khẩu |
@@ -144,19 +154,28 @@ Các endpoint dùng tiền tố `/api`.
 | `PUT` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Cập nhật nội dung và ảnh; thay thế toàn bộ request |
 | `PATCH` | `/products/{productId}/status` | Chủ tin hoặc Manager/Admin | Chuyển trạng thái `SELLING`, `SOLD` hoặc `HIDDEN` |
 | `DELETE` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Lưu trữ tin bằng trạng thái `HIDDEN`, giữ lịch sử chat |
-| `POST` | `/products/images` | Đã xác thực | Tải JPEG/PNG/WebP tối đa 8 MB; cần cấu hình Cloudinary |
-| `GET`, `POST` | `/conversations` | Đã xác thực | Liệt kê hội thoại hoặc tạo/lấy hội thoại trực tiếp |
+| `POST` | `/products/images` | Đã xác thực | Tải JPEG/PNG/WebP tối đa 8 MB cho tin sản phẩm hoặc bài viết; cần cấu hình Cloudinary |
+| `GET` | `/conversations` | Đã xác thực | Liệt kê hội thoại; chỉ hiển thị một luồng cho mỗi người trò chuyện |
+| `POST` | `/conversations` | Đã xác thực | Tạo/lấy hội thoại theo cặp người dùng; nhắn từ Marketplace dùng lại hội thoại trực tiếp hiện có |
 | `GET` | `/conversations/{id}/messages` | Thành viên hội thoại | Lịch sử tin nhắn, phân trang cursor và tự đánh dấu đã đọc |
 | `POST` | `/conversations/{id}/messages` | Thành viên hội thoại | Gửi tin dự phòng qua HTTP; gửi lại cùng `clientMessageId` không tạo bản sao |
 | `POST` | `/conversations/{id}/read` | Thành viên hội thoại | Đánh dấu tin đến là đã đọc |
 | `GET` | `/manager/dashboard` | Manager/Admin | Thống kê User, sản phẩm, bài viết, Page, báo cáo và Manager |
-| `GET` | `/manager/users`, `/manager/products`, `/manager/posts`, `/manager/pages`, `/manager/reports` | Manager/Admin | Danh sách quản trị có tìm kiếm/lọc; phân trang bằng `page`/`size` (tối đa 100) |
+| `GET` | `/manager/users`, `/manager/products`, `/manager/posts`, `/manager/groups`, `/manager/reports` | Manager/Admin | Danh sách quản trị có tìm kiếm/lọc; phân trang bằng `page`/`size` (tối đa 100) |
 | `PATCH` | `/manager/users/{id}/status` | Manager/Admin | Khóa/mở khóa tài khoản USER; không sửa tài khoản Manager/Admin |
-| `PATCH` | `/manager/products/{id}/visibility`, `/manager/posts/{id}/visibility`, `/manager/pages/{id}/visibility` | Manager/Admin | Ẩn/hiện nội dung; sản phẩm đã bán không thể khôi phục thành đang bán |
+| `PATCH` | `/manager/products/{id}/visibility`, `/manager/posts/{id}/visibility`, `/manager/groups/{id}/visibility` | Manager/Admin | Ẩn/hiện nội dung; sản phẩm đã bán không thể khôi phục thành đang bán |
 | `PATCH` | `/manager/reports/{id}` | Manager/Admin | Chấp nhận báo cáo để ẩn/khóa đối tượng hoặc từ chối; chỉ xử lý báo cáo đang chờ |
 | `POST` | `/admin/managers` | Admin | Tạo tài khoản Manager đã xác minh email |
 | `PATCH`, `DELETE` | `/admin/managers/{id}` và `/admin/managers/{id}/status` | Admin | Đổi trạng thái Manager hoặc vô hiệu hóa tài khoản (xóa mềm) |
 | `PATCH` | `/admin/users/{id}/role` | Admin | Chuyển vai trò USER↔MANAGER; không cấp hoặc sửa vai trò Admin |
+| `GET` | `/groups?search=&categoryId=&page=&size=` | Công khai | Khám phá nhóm theo tên và danh mục hàng hóa |
+| `GET` | `/groups/mine`, `/groups/{id}` | Đã xác thực (mine); chi tiết công khai/nhóm riêng tư | Danh sách nhóm do người dùng tạo hoặc thông tin nhóm |
+| `POST`, `PUT`, `DELETE` | `/groups`, `/groups/{id}` | Đã xác thực; sửa/xóa chỉ dành cho chủ nhóm (Admin có thể xóa) | Tạo/sửa/xóa nhóm; mỗi nhóm gắn với danh mục hàng hóa |
+| `POST`, `DELETE` | `/groups/{id}/membership` | Đã xác thực | Tham gia/rời nhóm công khai hoặc gửi/hủy yêu cầu vào nhóm riêng tư |
+| `GET`, `PUT` | `/groups/{id}/join-requests` và `/groups/{id}/join-requests/{requestId}` | Chủ nhóm/Moderator | Liệt kê, chấp nhận hoặc từ chối yêu cầu tham gia |
+| `GET`, `POST` | `/groups/{id}/posts` | Đọc nhóm công khai; đăng bài cần là thành viên | Xem/đăng bài viết văn bản và ảnh; bài thành viên chờ duyệt theo cấu hình nhóm |
+| `GET`, `PUT` | `/groups/{id}/posts/pending`, `/groups/{id}/posts/{postId}/moderation?status=APPROVED\|REJECTED` | Chủ nhóm/Moderator | Duyệt hoặc từ chối bài đang chờ |
+| `PUT`, `DELETE` | `/groups/{id}/posts/{postId}` | Tác giả; Moderator có thể quản lý bài | Sửa hoặc xóa bài viết nhóm |
 
 Dashboard dùng chung tại `/manager` cho Manager và `/admin` cho Admin. Manager chỉ vận hành User/nội dung/báo cáo; Admin có thêm tab quản lý Manager và thay đổi vai trò. Các thao tác quản trị được kiểm tra tại backend; khóa tài khoản cũng vô hiệu hóa JWT đang còn hạn.
 

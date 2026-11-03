@@ -3,7 +3,7 @@ import Logo from './Logo'
 
 export function NavButton({ item, active, onClick, mobile = false }) {
   const Icon = item.icon
-  return <button onClick={onClick} className={`flex items-center justify-center gap-3 rounded-xl text-sm font-bold transition ${mobile ? 'w-1/4 flex-col gap-1 px-1 py-1 text-[10px]' : 'justify-start px-3 py-3'} ${active ? 'bg-[#eaf3ff] text-[#087cf5] dark:bg-blue-950/60 dark:text-blue-300' : 'text-[#7b879b] hover:bg-[#f5f7fa] hover:text-[#172238] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'}`}><Icon size={mobile ? 20 : 19} strokeWidth={active ? 2.5 : 2} /><span>{item.label}</span></button>
+  return <button onClick={onClick} className={`flex items-center justify-center gap-3 rounded-xl text-sm font-bold transition ${mobile ? 'min-w-0 flex-1 flex-col gap-1 px-1 py-1 text-[10px]' : 'justify-start px-3 py-3'} ${active ? 'bg-[#eaf3ff] text-[#087cf5] dark:bg-blue-950/60 dark:text-blue-300' : 'text-[#7b879b] hover:bg-[#f5f7fa] hover:text-[#172238] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'}`}><Icon size={mobile ? 20 : 19} strokeWidth={active ? 2.5 : 2} /><span className={mobile ? 'max-w-full truncate' : ''}>{item.label}</span></button>
 }
 
 export function DesktopSidebar({ activeNav, onNavigate, onAuth, items, user }) {

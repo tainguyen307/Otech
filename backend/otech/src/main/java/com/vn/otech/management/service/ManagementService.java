@@ -3,7 +3,7 @@ package com.vn.otech.management.service;
 import com.vn.otech.auth.repository.RoleRepository;
 import com.vn.otech.auth.repository.UserRepository;
 import com.vn.otech.entity.AccountStatus;
-import com.vn.otech.entity.Page;
+import com.vn.otech.entity.Group;
 import com.vn.otech.entity.Post;
 import com.vn.otech.entity.Product;
 import com.vn.otech.entity.ProductStatus;
@@ -17,12 +17,12 @@ import com.vn.otech.management.dto.ChangeUserRoleRequest;
 import com.vn.otech.management.dto.CreateManagerRequest;
 import com.vn.otech.management.dto.ManagementDashboardSummary;
 import com.vn.otech.management.dto.ManagementPage;
-import com.vn.otech.management.dto.ManagedPageResponse;
+import com.vn.otech.management.dto.ManagedGroupResponse;
 import com.vn.otech.management.dto.ManagedPostResponse;
 import com.vn.otech.management.dto.ManagedProductResponse;
 import com.vn.otech.management.dto.ManagedReportResponse;
 import com.vn.otech.management.dto.ManagedUserResponse;
-import com.vn.otech.management.repository.PageManagementRepository;
+import com.vn.otech.management.repository.GroupManagementRepository;
 import com.vn.otech.management.repository.ReportManagementRepository;
 import com.vn.otech.market.repository.ProductRepository;
 import com.vn.otech.post.repository.PostRepository;
@@ -51,7 +51,7 @@ public class ManagementService {
     private final RoleRepository roleRepository;
     private final ProductRepository productRepository;
     private final PostRepository postRepository;
-    private final PageManagementRepository pageRepository;
+    private final GroupManagementRepository groupRepository;
     private final ReportManagementRepository reportRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -60,14 +60,14 @@ public class ManagementService {
             RoleRepository roleRepository,
             ProductRepository productRepository,
             PostRepository postRepository,
-            PageManagementRepository pageRepository,
+            GroupManagementRepository groupRepository,
             ReportManagementRepository reportRepository,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.productRepository = productRepository;
         this.postRepository = postRepository;
-        this.pageRepository = pageRepository;
+        this.groupRepository = groupRepository;
         this.reportRepository = reportRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -81,8 +81,8 @@ public class ManagementService {
                 productRepository.countByStatus(ProductStatus.HIDDEN),
                 postRepository.count(),
                 postRepository.countByHiddenTrue(),
-                pageRepository.count(),
-                pageRepository.countByHiddenTrue(),
+                groupRepository.count(),
+                groupRepository.countByHiddenTrue(),
                 reportRepository.countByStatus(ReportStatus.PENDING),
                 userRepository.countByRole_Name(RoleName.MANAGER));
     }
@@ -153,10 +153,10 @@ public class ManagementService {
                 .map(this::toPostResponse));
     }
 
-    public ManagementPage<ManagedPageResponse> listPages(
+    public ManagementPage<ManagedGroupResponse> listGroups(
             String search, Boolean hidden, int page, int size) {
         String normalizedSearch = normalizeSearch(search);
-        Specification<Page> specification = (root, query, criteriaBuilder) -> {
+        Specification<Group> specification = (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (normalizedSearch != null) {
                 String pattern = "%" + normalizedSearch + "%";
@@ -171,8 +171,8 @@ public class ManagementService {
             }
             return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
         };
-        return ManagementPage.from(pageRepository.findAll(specification, pageable(page, size))
-                .map(this::toPageResponse));
+        return ManagementPage.from(groupRepository.findAll(specification, pageable(page, size))
+                .map(this::toGroupResponse));
     }
 
     public ManagementPage<ManagedReportResponse> listReports(
@@ -217,10 +217,10 @@ public class ManagementService {
     }
 
     @Transactional
-    public ManagedPageResponse updatePageVisibility(UUID pageId, boolean hidden) {
-        Page page = pageRepository.findById(pageId).orElseThrow(() -> notFound("Page"));
-        page.setHidden(hidden);
-        return toPageResponse(pageRepository.save(page));
+    public ManagedGroupResponse updateGroupVisibility(UUID groupId, boolean hidden) {
+        Group group = groupRepository.findById(groupId).orElseThrow(() -> notFound("Group"));
+        group.setHidden(hidden);
+        return toGroupResponse(groupRepository.save(group));
     }
 
     @Transactional
@@ -335,10 +335,10 @@ public class ManagementService {
                 post.setHidden(true);
                 postRepository.save(post);
             }
-            case PAGE -> {
-                Page page = pageRepository.findById(targetId).orElseThrow(() -> notFound("Reported page"));
-                page.setHidden(true);
-                pageRepository.save(page);
+            case GROUP -> {
+                Group group = groupRepository.findById(targetId).orElseThrow(() -> notFound("Reported group"));
+                group.setHidden(true);
+                groupRepository.save(group);
             }
         }
     }
@@ -406,11 +406,11 @@ public class ManagementService {
                 post.isHidden(), post.getCreatedAt());
     }
 
-    private ManagedPageResponse toPageResponse(Page page) {
-        return new ManagedPageResponse(
-                page.getId(), page.getName(),
-                page.getOwner() == null ? "Otech member" : page.getOwner().getFullName(),
-                page.isHidden(), page.getCreatedAt());
+    private ManagedGroupResponse toGroupResponse(Group group) {
+        return new ManagedGroupResponse(
+                group.getId(), group.getName(),
+                group.getOwner() == null ? "Otech member" : group.getOwner().getFullName(),
+                group.isHidden(), group.getCreatedAt());
     }
 
     private ManagedReportResponse toReportResponse(Report report) {

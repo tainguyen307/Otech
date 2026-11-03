@@ -11,8 +11,10 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.domain.Specification;
 
 public interface PostRepository extends JpaRepository<Post, UUID>, JpaSpecificationExecutor<Post> {
+    @EntityGraph(attributePaths = "author")
     List<Post> findByHiddenFalseOrderByCreatedAtDesc();
 
+    @EntityGraph(attributePaths = "author")
     List<Post> findByAuthor_IdAndHiddenFalseOrderByCreatedAtDesc(UUID authorId);
 
     @Override

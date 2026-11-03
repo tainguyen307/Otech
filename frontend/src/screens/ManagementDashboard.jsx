@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Trash2,
   Users,
+  UsersRound,
   X,
 } from 'lucide-react'
 import { apiErrorMessage, apiFetch } from '../lib/api'
@@ -27,7 +28,7 @@ const managementTabs = [
   { id: 'users', label: 'Người dùng', icon: Users },
   { id: 'products', label: 'Sản phẩm', icon: ShoppingBag },
   { id: 'posts', label: 'Bài viết', icon: FileText },
-  { id: 'pages', label: 'Trang cộng đồng', icon: Shield },
+  { id: 'groups', label: 'Nhóm', icon: UsersRound },
   { id: 'reports', label: 'Báo cáo', icon: Flag },
 ]
 
@@ -120,7 +121,7 @@ function ManagementDashboard({ user }) {
       path = `/manager/users?${params.toString()}`
     } else if (activeTab === 'products' && filter) {
       params.set('status', filter)
-    } else if ((activeTab === 'posts' || activeTab === 'pages') && filter) {
+    } else if ((activeTab === 'posts' || activeTab === 'groups') && filter) {
       params.set('hidden', filter === 'HIDDEN' ? 'true' : 'false')
     } else if (activeTab === 'reports' && filter) {
       params.set('status', filter)
@@ -270,12 +271,12 @@ function ManagementDashboard({ user }) {
       <td>{formatDate(item.createdAt)}</td>
       <td><ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/posts/${item.id}/visibility`, 'PATCH', { hidden: !item.hidden }, item.hidden ? 'Đã hiển thị bài viết.' : 'Đã ẩn bài viết.')}><Eye size={14} aria-hidden="true" />{item.hidden ? 'Hiện' : 'Ẩn'}</ActionButton></td>
     </tr>)
-    if (activeTab === 'pages') return rows.map((item) => <tr key={item.id}>
+    if (activeTab === 'groups') return rows.map((item) => <tr key={item.id}>
       <td className="font-semibold">{item.name}</td>
       <td>{item.ownerName}</td>
       <td><StatusBadge>{item.hidden ? 'HIDDEN' : 'PUBLIC'}</StatusBadge></td>
       <td>{formatDate(item.createdAt)}</td>
-      <td><ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/pages/${item.id}/visibility`, 'PATCH', { hidden: !item.hidden }, item.hidden ? 'Đã hiển thị trang.' : 'Đã ẩn trang.')}><Eye size={14} aria-hidden="true" />{item.hidden ? 'Hiện' : 'Ẩn'}</ActionButton></td>
+      <td><ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/groups/${item.id}/visibility`, 'PATCH', { hidden: !item.hidden }, item.hidden ? 'Đã hiển thị nhóm.' : 'Đã ẩn nhóm.')}><Eye size={14} aria-hidden="true" />{item.hidden ? 'Hiện' : 'Ẩn'}</ActionButton></td>
     </tr>)
     if (activeTab === 'reports') return rows.map((item) => <tr key={item.id}>
       <td><StatusBadge>{item.status}</StatusBadge></td>
@@ -291,12 +292,52 @@ function ManagementDashboard({ user }) {
     return null
   }
 
+  const renderMobileRows = () => {
+    const rows = tableData.content || []
+    return rows.map((item) => {
+      if (activeTab === 'users' || activeTab === 'managers') return <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0"><h3 className="truncate font-bold text-slate-900 dark:text-white">{item.fullName}</h3><p className="mt-1 break-all text-sm text-slate-500 dark:text-slate-400">{item.email}</p></div>
+          <StatusBadge>{item.status}</StatusBadge>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><StatusBadge>{item.role}</StatusBadge><span className="text-xs text-slate-500 dark:text-slate-400">Tham gia {formatDate(item.createdAt)}</span></div>
+        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">{renderUserActions(item)}</div>
+      </article>
+      if (activeTab === 'products') return <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 flex-1 font-bold text-slate-900 dark:text-white">{item.title}</h3><StatusBadge>{item.status}</StatusBadge></div>
+        <p className="mt-2 text-lg font-extrabold text-blue-600 dark:text-blue-300">{formatPrice(item.price)}</p>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{item.sellerName} <span aria-hidden="true">·</span> {formatDate(item.createdAt)}</p>
+        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800">{item.status === 'SOLD' ? <span className="text-sm text-slate-500 dark:text-slate-400">Sản phẩm đã bán</span> : <ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/products/${item.id}/visibility`, 'PATCH', { hidden: item.status !== 'HIDDEN' }, item.status === 'HIDDEN' ? 'Đã khôi phục sản phẩm.' : 'Đã ẩn sản phẩm.')}><Eye size={14} aria-hidden="true" />{item.status === 'HIDDEN' ? 'Khôi phục' : 'Ẩn sản phẩm'}</ActionButton>}</div>
+      </article>
+      if (activeTab === 'posts') return <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3"><h3 className="line-clamp-2 min-w-0 flex-1 font-semibold leading-6 text-slate-900 dark:text-white">{item.content}</h3><StatusBadge>{item.hidden ? 'HIDDEN' : 'PUBLIC'}</StatusBadge></div>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{item.authorName} <span aria-hidden="true">·</span> {formatDate(item.createdAt)}</p>
+        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800"><ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/posts/${item.id}/visibility`, 'PATCH', { hidden: !item.hidden }, item.hidden ? 'Đã hiển thị bài viết.' : 'Đã ẩn bài viết.')}><Eye size={14} aria-hidden="true" />{item.hidden ? 'Hiện bài viết' : 'Ẩn bài viết'}</ActionButton></div>
+      </article>
+      if (activeTab === 'groups') return <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3"><h3 className="min-w-0 flex-1 font-bold text-slate-900 dark:text-white">{item.name}</h3><StatusBadge>{item.hidden ? 'HIDDEN' : 'PUBLIC'}</StatusBadge></div>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{item.ownerName} <span aria-hidden="true">·</span> {formatDate(item.createdAt)}</p>
+        <div className="mt-4 border-t border-slate-100 pt-3 dark:border-slate-800"><ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/groups/${item.id}/visibility`, 'PATCH', { hidden: !item.hidden }, item.hidden ? 'Đã hiển thị nhóm.' : 'Đã ẩn nhóm.')}><Eye size={14} aria-hidden="true" />{item.hidden ? 'Hiện nhóm' : 'Ẩn nhóm'}</ActionButton></div>
+      </article>
+      if (activeTab === 'reports') return <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex items-start justify-between gap-3"><div><p className="font-bold text-slate-900 dark:text-white">{item.targetType}</p><p className="mt-1 break-all font-mono text-xs text-slate-500 dark:text-slate-400">Mã: {item.targetId}</p></div><StatusBadge>{item.status}</StatusBadge></div>
+        <p className="mt-3 text-sm leading-6 text-slate-700 dark:text-slate-300">{item.reason}</p>
+        <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Bởi {item.reporterName} <span aria-hidden="true">·</span> {formatDate(item.createdAt)}</p>
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">{item.status === 'PENDING' ? <>
+          <ActionButton disabled={actionLoading} onClick={() => runAction(`/manager/reports/${item.id}`, 'PATCH', { status: 'APPROVED' }, 'Đã chấp nhận báo cáo và xử lý nội dung.')}><Check size={14} aria-hidden="true" />Xử lý báo cáo</ActionButton>
+          <ActionButton danger disabled={actionLoading} onClick={() => runAction(`/manager/reports/${item.id}`, 'PATCH', { status: 'REJECTED' }, 'Đã từ chối báo cáo.')}><X size={14} aria-hidden="true" />Từ chối</ActionButton>
+        </> : <span className="py-2 text-sm text-slate-500 dark:text-slate-400">Báo cáo đã được xử lý</span>}</div>
+      </article>
+      return null
+    })
+  }
+
   const tableHeaders = {
     users: ['Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Ngày tạo', 'Thao tác'],
     managers: ['Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Ngày tạo', 'Thao tác'],
     products: ['Sản phẩm', 'Người bán', 'Giá', 'Trạng thái', 'Ngày đăng', 'Thao tác'],
     posts: ['Nội dung', 'Tác giả', 'Hiển thị', 'Ngày đăng', 'Thao tác'],
-    pages: ['Trang', 'Chủ sở hữu', 'Hiển thị', 'Ngày tạo', 'Thao tác'],
+    groups: ['Nhóm', 'Quản trị viên', 'Hiển thị', 'Ngày tạo', 'Thao tác'],
     reports: ['Trạng thái', 'Đối tượng', 'Mã nội dung', 'Lý do báo cáo', 'Ngày gửi', 'Thao tác'],
   }
 
@@ -304,7 +345,7 @@ function ManagementDashboard({ user }) {
     users: [['', 'Mọi vai trò/trạng thái'], ['USER', 'Người dùng'], ['MANAGER', 'Manager'], ['ADMIN', 'Admin'], ['ACTIVE', 'Đang hoạt động'], ['LOCKED', 'Đã khóa']],
     products: [['', 'Mọi trạng thái'], ['SELLING', 'Đang bán'], ['SOLD', 'Đã bán'], ['HIDDEN', 'Đã ẩn']],
     posts: [['', 'Mọi bài viết'], ['VISIBLE', 'Đang hiển thị'], ['HIDDEN', 'Đã ẩn']],
-    pages: [['', 'Mọi trang'], ['VISIBLE', 'Đang hiển thị'], ['HIDDEN', 'Đã ẩn']],
+    groups: [['', 'Mọi nhóm'], ['VISIBLE', 'Đang hiển thị'], ['HIDDEN', 'Đã ẩn']],
     reports: [['', 'Mọi báo cáo'], ['PENDING', 'Chờ xử lý'], ['APPROVED', 'Đã chấp nhận'], ['REJECTED', 'Đã từ chối']],
   }
 
@@ -342,7 +383,7 @@ function ManagementDashboard({ user }) {
         <section aria-label="Thống kê quản trị" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard label="Người dùng" value={summary?.users} detail={`${summary?.activeUsers ?? 0} đang hoạt động · ${summary?.lockedUsers ?? 0} đã khóa`} icon={Users} onClick={() => changeTab('users')} />
           <MetricCard label="Sản phẩm" value={summary?.products} detail={`${summary?.hiddenProducts ?? 0} sản phẩm đang ẩn`} icon={ShoppingBag} onClick={() => changeTab('products')} />
-          <MetricCard label="Bài viết & trang" value={(summary?.posts ?? 0) + (summary?.pages ?? 0)} detail={`${summary?.hiddenPosts ?? 0} bài viết · ${summary?.hiddenPages ?? 0} trang đang ẩn`} icon={FileText} onClick={() => changeTab('posts')} />
+          <MetricCard label="Bài viết & nhóm" value={(summary?.posts ?? 0) + (summary?.groups ?? 0)} detail={`${summary?.hiddenPosts ?? 0} bài viết · ${summary?.hiddenGroups ?? 0} nhóm đang ẩn`} icon={FileText} onClick={() => changeTab('posts')} />
           <MetricCard label="Báo cáo chờ xử lý" value={summary?.pendingReports} detail="Cần được xem xét" icon={Flag} onClick={() => { changeTab('reports'); chooseFilter('PENDING') }} />
         </section>
 
@@ -351,7 +392,7 @@ function ManagementDashboard({ user }) {
             <h2 className="text-lg font-extrabold">Quyền hạn hiện tại</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{isAdmin ? 'Admin kế thừa các quyền vận hành của Manager và có thêm quyền quản trị tài khoản Manager.' : 'Manager tập trung vận hành cộng đồng và không thể thay đổi tài khoản quản trị.'}</p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/70"><p className="font-bold">Kiểm duyệt nội dung</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Quản lý sản phẩm, bài viết, trang cộng đồng và báo cáo.</p></div>
+              <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/70"><p className="font-bold">Kiểm duyệt nội dung</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Quản lý sản phẩm, bài viết, nhóm cộng đồng và báo cáo.</p></div>
               <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800/70"><p className="font-bold">Quản lý tài khoản</p><p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{isAdmin ? `${summary?.managers ?? 0} tài khoản Manager trong hệ thống.` : 'Tìm kiếm, xem và khóa/mở khóa tài khoản User.'}</p></div>
             </div>
           </div>
@@ -386,14 +427,16 @@ function ManagementDashboard({ user }) {
         </div>
 
         {loading ? <div className="flex min-h-56 items-center justify-center gap-2 text-sm text-slate-500"><LoaderCircle className="animate-spin" size={18} aria-hidden="true" />Đang tải dữ liệu…</div>
-          : <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+        : tableData.content?.length ? <>
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[900px] text-left text-sm [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-slate-50/80 [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_td]:leading-6 dark:[&_tbody_tr:hover]:bg-slate-800/40">
               <caption className="sr-only">{currentTab.label}</caption>
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800/70 dark:text-slate-400"><tr>{(tableHeaders[activeTab] || []).map((header) => <th key={header} scope="col" className="px-4 py-3 font-bold">{header}</th>)}</tr></thead>
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:bg-slate-800/70 dark:text-slate-400"><tr>{(tableHeaders[activeTab] || []).map((header) => <th key={header} scope="col" className="whitespace-nowrap px-5 py-3.5 font-bold">{header}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">{renderRows()}</tbody>
             </table>
-            {!tableData.content?.length && <div className="px-5 py-14 text-center text-sm text-slate-500 dark:text-slate-400">Không có dữ liệu phù hợp.</div>}
-          </div>}
+          </div>
+          <div className="grid gap-3 p-3 md:hidden">{renderMobileRows()}</div>
+        </> : <div className="px-5 py-14 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"><Search size={20} aria-hidden="true" /></span><p className="mt-3 text-sm font-bold text-slate-700 dark:text-slate-200">Không tìm thấy kết quả</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Thử đổi từ khóa hoặc bộ lọc để xem thêm dữ liệu.</p></div>}
 
         <footer className="flex items-center justify-between border-t border-slate-100 px-4 py-4 dark:border-slate-800 sm:px-5">
           <p className="text-xs text-slate-500 dark:text-slate-400">Trang {tableData.totalPages ? page + 1 : 0} / {tableData.totalPages || 0}</p>
