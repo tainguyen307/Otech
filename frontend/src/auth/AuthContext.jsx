@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-
-const AuthContext = createContext(null)
+import { useEffect, useState } from 'react'
+import { AuthContext } from './authContext'
 
 function readUser() {
   try {
@@ -44,5 +43,3 @@ export function AuthProvider({ children }) {
 
   return <AuthContext.Provider value={{ user, isAuthenticated: Boolean(user), signIn, signOut, updateUser }}>{children}</AuthContext.Provider>
 }
-
-export function useAuth() { return useContext(AuthContext) }

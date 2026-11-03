@@ -8,8 +8,8 @@ public record ManagementDashboardSummary(
         long hiddenProducts,
         long posts,
         long hiddenPosts,
-        long pages,
-        long hiddenPages,
+        long groups,
+        long hiddenGroups,
         long pendingReports,
         long managers) {
 }

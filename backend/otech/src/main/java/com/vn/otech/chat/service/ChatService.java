@@ -26,8 +26,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
@@ -81,12 +83,10 @@ public class ChatService {
         User currentUser = findActiveUser(email);
         User recipient;
         Product product = null;
-        UUID productId = null;
         if (request.productId() != null) {
             product = productRepository.findWithSellerAndCategoryById(request.productId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
             recipient = product.getSeller();
-            productId = product.getId();
         } else {
             recipient = userRepository.findById(request.recipientId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
@@ -98,8 +98,10 @@ public class ChatService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
 
-        Conversation conversation = conversationRepository.findDirectConversation(
-                        productId, currentUser.getId(), recipient.getId())
+        Conversation conversation = conversationRepository.findDirectConversations(
+                        currentUser.getId(), recipient.getId())
+                .stream()
+                .findFirst()
                 .orElse(null);
         if (conversation == null) {
             if (product != null && product.getStatus() != ProductStatus.SELLING) {
@@ -112,9 +114,8 @@ public class ChatService {
                     participant(conversation, currentUser),
                     participant(conversation, recipient)));
         }
-        UUID conversationId = conversation.getId();
         return listConversations(email).stream()
-                .filter(item -> item.id().equals(conversationId))
+                .filter(item -> item.participant() != null && item.participant().id().equals(recipient.getId()))
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                         "Could not load the conversation"));
@@ -140,7 +141,7 @@ public class ChatService {
                 .collect(Collectors.toMap(row -> (UUID) row[0], row -> (Long) row[1]));
 
         Map<UUID, String> productImages = loadProductImages(conversations);
-        return conversations.stream()
+        List<ConversationResponse> responses = conversations.stream()
                 .map(conversation -> toConversationResponse(
                         conversation,
                         currentUser.getId(),
@@ -151,6 +152,11 @@ public class ChatService {
                 .sorted(Comparator.comparing(
                         item -> item.lastMessage() == null ? item.createdAt() : item.lastMessage().createdAt(),
                         Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+        Set<UUID> seenParticipants = new HashSet<>();
+        return responses.stream()
+                .filter(response -> response.participant() != null
+                        && seenParticipants.add(response.participant().id()))
                 .toList();
     }
 

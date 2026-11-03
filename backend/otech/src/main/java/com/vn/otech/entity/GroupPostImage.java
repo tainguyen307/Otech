@@ -7,10 +7,10 @@ import lombok.Setter;
 import java.util.UUID;
 
 @Entity
-@Table(name = "page_post_images")
+@Table(name = "group_post_images")
 @Getter @Setter @NoArgsConstructor
-public class PagePostImage {
+public class GroupPostImage {
     @Id @GeneratedValue private UUID id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "page_post_id") private PagePost pagePost;
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "group_post_id") private GroupPost groupPost;
     @Column(name = "image_url", nullable = false) private String imageUrl;
 }

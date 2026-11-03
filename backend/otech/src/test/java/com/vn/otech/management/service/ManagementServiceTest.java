@@ -15,7 +15,7 @@ import com.vn.otech.entity.Role;
 import com.vn.otech.entity.RoleName;
 import com.vn.otech.entity.User;
 import com.vn.otech.management.dto.CreateManagerRequest;
-import com.vn.otech.management.repository.PageManagementRepository;
+import com.vn.otech.management.repository.GroupManagementRepository;
 import com.vn.otech.management.repository.ReportManagementRepository;
 import com.vn.otech.market.repository.ProductRepository;
 import com.vn.otech.post.repository.PostRepository;
@@ -37,7 +37,7 @@ class ManagementServiceTest {
     @Mock private RoleRepository roleRepository;
     @Mock private ProductRepository productRepository;
     @Mock private PostRepository postRepository;
-    @Mock private PageManagementRepository pageRepository;
+    @Mock private GroupManagementRepository groupRepository;
     @Mock private ReportManagementRepository reportRepository;
     @Mock private PasswordEncoder passwordEncoder;
     @InjectMocks private ManagementService managementService;

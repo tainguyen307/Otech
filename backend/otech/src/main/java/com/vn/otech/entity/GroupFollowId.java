@@ -7,15 +7,15 @@ import java.util.UUID;
 
 @Embeddable
 @EqualsAndHashCode
-public class PageFollowId implements Serializable {
-    private UUID pageId;
+public class GroupFollowId implements Serializable {
+    private UUID groupId;
     private UUID userId;
 
-    public PageFollowId() {
+    public GroupFollowId() {
     }
 
-    public PageFollowId(UUID pageId, UUID userId) {
-        this.pageId = pageId;
+    public GroupFollowId(UUID groupId, UUID userId) {
+        this.groupId = groupId;
         this.userId = userId;
     }
 }

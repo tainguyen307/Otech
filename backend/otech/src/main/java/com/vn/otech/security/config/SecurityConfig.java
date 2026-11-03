@@ -51,8 +51,10 @@ public class SecurityConfig {
 			.httpBasic(httpBasic -> httpBasic.disable())
 			.authorizeHttpRequests(authorize -> authorize
 				.requestMatchers("/", "/error", "/api/auth/**", "/ws", "/ws/**").permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/groups/mine", "/api/groups/*/join-requests",
+						"/api/groups/*/posts/pending").authenticated()
 				.requestMatchers(HttpMethod.GET, "/api/posts/**", "/api/products/**", "/api/categories/**",
-						"/api/pages/**", "/api/profiles/**").permitAll()
+						"/api/groups/**", "/api/profiles/**").permitAll()
 				.requestMatchers("/api/admin/**").hasRole("ADMIN")
 				.requestMatchers("/api/manager/**").hasAnyRole("MANAGER", "ADMIN")
 				.requestMatchers("/api/user/**").hasAnyRole("USER", "MANAGER", "ADMIN")

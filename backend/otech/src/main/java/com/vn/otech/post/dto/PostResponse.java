@@ -13,7 +13,9 @@ public record PostResponse(
         String title,
         String copy,
         String price,
-        Integer likes,
-        Integer comments,
-        String tag) {
+        long likes,
+        long comments,
+        String tag,
+        long shares,
+        boolean likedByCurrentUser) {
 }
