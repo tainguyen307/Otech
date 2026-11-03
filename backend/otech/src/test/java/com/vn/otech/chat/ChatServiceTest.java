@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.vn.otech.auth.repository.UserRepository;
 import com.vn.otech.chat.dto.MessageSendRequest;
+import com.vn.otech.chat.dto.ConversationCreateRequest;
 import com.vn.otech.chat.repository.ConversationParticipantRepository;
 import com.vn.otech.chat.repository.ConversationRepository;
 import com.vn.otech.chat.repository.MessageRepository;
@@ -20,6 +21,8 @@ import com.vn.otech.entity.Conversation;
 import com.vn.otech.entity.ConversationParticipant;
 import com.vn.otech.entity.Message;
 import com.vn.otech.entity.MessageStatus;
+import com.vn.otech.entity.Product;
+import com.vn.otech.entity.ProductStatus;
 import com.vn.otech.entity.User;
 import com.vn.otech.market.repository.ProductImageRepository;
 import com.vn.otech.market.repository.ProductRepository;
@@ -187,6 +190,57 @@ class ChatServiceTest {
         verify(messageRepository, never()).findLatestByConversationId(any(), any(PageRequest.class));
     }
 
+    @Test
+    void productMessageReusesAnExistingDirectConversationWithTheSeller() {
+        UUID productId = UUID.randomUUID();
+        Product product = new Product();
+        product.setId(productId);
+        product.setSeller(recipient);
+        product.setStatus(ProductStatus.SELLING);
+        conversation.setCreatedAt(LocalDateTime.of(2026, 10, 1, 12, 0));
+        when(productRepository.findWithSellerAndCategoryById(productId)).thenReturn(Optional.of(product));
+        when(conversationRepository.findDirectConversations(sender.getId(), recipient.getId()))
+                .thenReturn(List.of(conversation));
+        when(participantRepository.findByUser_Id(sender.getId())).thenReturn(List.of(participant(sender)));
+        when(participantRepository.findByConversation_IdIn(List.of(conversation.getId())))
+                .thenReturn(List.of(participant(sender), participant(recipient)));
+        when(messageRepository.findLatestByConversationIds(List.of(conversation.getId()))).thenReturn(List.of());
+        when(messageRepository.countUnreadByConversationIds(List.of(conversation.getId()), sender.getId()))
+                .thenReturn(List.of());
+
+        var result = chatService.createConversation(
+                sender.getEmail(), new ConversationCreateRequest(productId, null));
+
+        assertEquals(conversation.getId(), result.id());
+        verify(conversationRepository).findDirectConversations(sender.getId(), recipient.getId());
+        verify(conversationRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void conversationListCollapsesExistingThreadsForTheSamePerson() {
+        Conversation duplicate = new Conversation();
+        duplicate.setId(UUID.randomUUID());
+        duplicate.setCreatedAt(LocalDateTime.of(2026, 10, 2, 12, 0));
+        ConversationParticipant senderInOriginal = participantFor(conversation, sender);
+        ConversationParticipant recipientInOriginal = participantFor(conversation, recipient);
+        ConversationParticipant senderInDuplicate = participantFor(duplicate, sender);
+        ConversationParticipant recipientInDuplicate = participantFor(duplicate, recipient);
+        when(participantRepository.findByUser_Id(sender.getId()))
+                .thenReturn(List.of(senderInOriginal, senderInDuplicate));
+        when(participantRepository.findByConversation_IdIn(List.of(conversation.getId(), duplicate.getId())))
+                .thenReturn(List.of(senderInOriginal, recipientInOriginal, senderInDuplicate, recipientInDuplicate));
+        when(messageRepository.findLatestByConversationIds(List.of(conversation.getId(), duplicate.getId())))
+                .thenReturn(List.of());
+        when(messageRepository.countUnreadByConversationIds(
+                List.of(conversation.getId(), duplicate.getId()), sender.getId())).thenReturn(List.of());
+
+        var result = chatService.listConversations(sender.getEmail());
+
+        assertEquals(1, result.size());
+        assertEquals(recipient.getId(), result.getFirst().participant().id());
+        assertEquals(duplicate.getId(), result.getFirst().id());
+    }
+
     private User user(String email, String name) {
         User user = new User();
         user.setId(UUID.randomUUID());
@@ -197,8 +251,12 @@ class ChatServiceTest {
     }
 
     private ConversationParticipant participant(User user) {
+        return participantFor(conversation, user);
+    }
+
+    private ConversationParticipant participantFor(Conversation target, User user) {
         ConversationParticipant participant = new ConversationParticipant();
-        participant.setConversation(conversation);
+        participant.setConversation(target);
         participant.setUser(user);
         return participant;
     }
