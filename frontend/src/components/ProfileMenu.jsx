@@ -5,7 +5,7 @@ function initials(name) {
   return name.split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
 }
 
-export default function ProfileMenu({ user, darkMode, onToggleTheme, onSignOut, onProfile, onHome }) {
+export default function ProfileMenu({ user, darkMode, onToggleTheme, onSignOut, onProfile, onHome, activeNav }) {
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef(null)
   const displayName = user.fullName || 'Otech member'
@@ -26,8 +26,8 @@ export default function ProfileMenu({ user, darkMode, onToggleTheme, onSignOut, 
     </button>
     {isOpen && <div role="menu" className="absolute right-0 top-14 w-64 rounded-2xl border border-[#e3e8f0] bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
       <div className="border-b border-[#edf0f4] px-3 py-3 dark:border-slate-800"><p className="truncate text-sm font-extrabold text-[#172238] dark:text-white">{displayName}</p><p className="mt-0.5 text-xs text-[#8290a4]">Account menu</p></div>
-      <button role="menuitem" onClick={() => { setIsOpen(false); onProfile() }} className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#eaf3ff] px-3 py-2.5 text-sm font-bold text-[#087cf5] transition hover:bg-[#dcecff] dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/60"><UserRound size={17} /> Profile</button>
-      <button role="menuitem" onClick={() => { setIsOpen(false); onHome() }} className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#526177] transition hover:bg-[#f5f7fa] dark:text-slate-300 dark:hover:bg-slate-800"><Home size={17} /> Home</button>
+      <button role="menuitem" aria-current={activeNav === 'Profile' ? 'page' : undefined} onClick={() => { setIsOpen(false); onProfile() }} className={`mt-2 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeNav === 'Profile' ? 'bg-[#eaf3ff] font-bold text-[#087cf5] hover:bg-[#dcecff] dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/60' : 'font-semibold text-[#526177] hover:bg-[#f5f7fa] dark:text-slate-300 dark:hover:bg-slate-800'}`}><UserRound size={17} /> Profile</button>
+      <button role="menuitem" aria-current={activeNav === 'Home' ? 'page' : undefined} onClick={() => { setIsOpen(false); onHome() }} className={`mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${activeNav === 'Home' ? 'bg-[#eaf3ff] font-bold text-[#087cf5] hover:bg-[#dcecff] dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/60' : 'font-semibold text-[#526177] hover:bg-[#f5f7fa] dark:text-slate-300 dark:hover:bg-slate-800'}`}><Home size={17} /> Home</button>
       <button role="menuitem" onClick={() => { setIsOpen(false); onToggleTheme() }} className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#526177] transition hover:bg-[#f5f7fa] dark:text-slate-300 dark:hover:bg-slate-800">{darkMode ? <Sun size={17} /> : <Moon size={17} />} {darkMode ? 'Light mode' : 'Dark mode'}</button>
       <button role="menuitem" onClick={() => { setIsOpen(false); onSignOut() }} className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-[#d9485f] transition hover:bg-[#fff1f2] dark:hover:bg-rose-950/40"><LogOut size={17} /> Sign out</button>
     </div>}

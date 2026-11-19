@@ -39,14 +39,16 @@ function App() {
   const [saved, setSaved] = useState([])
   const [authMode, setAuthMode] = useState(null)
   const [actionError, setActionError] = useState('')
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [darkMode, setDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme')
+    return savedTheme ? savedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+  })
   const { user, signIn, signOut, updateUser } = useAuth()
   const navigationItems = visibleNavItems(user)
   const { activeNav, profileUserId, conversationId, groupId } = route
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
-    localStorage.setItem('theme', darkMode ? 'dark' : 'light')
   }, [darkMode])
 
   useEffect(() => {
@@ -103,9 +105,13 @@ function App() {
       setActionError(requestError.message || 'Could not start this conversation.')
     }
   }
-  return <div className="min-h-screen bg-[#f5f7fa] text-[#172238] dark:bg-slate-950 dark:text-slate-100">
+  return <div className="min-h-screen bg-background text-foreground">
     <DesktopSidebar activeNav={activeNav} onNavigate={handleNavigate} onAuth={requireAuth} items={navigationItems} user={user} />
-    <Header onAuth={requireAuth} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} user={user} onSignOut={() => { signOut(); navigateTo('/') }} onHome={() => navigateTo('/')} onProfile={() => navigateTo('/profile')} />
+    <Header activeNav={activeNav} onAuth={requireAuth} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => {
+      const next = !value
+      localStorage.setItem('theme', next ? 'dark' : 'light')
+      return next
+    })} user={user} onSignOut={() => { signOut(); navigateTo('/') }} onHome={() => navigateTo('/')} onProfile={() => navigateTo('/profile')} />
     {actionError && <div role="alert" className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 lg:ml-[268px] lg:mr-10 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{actionError}</div>}
     {activeNav === 'Home' && <HomeScreen saved={saved} onSave={(id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onAuth={requireAuth} onOpenProfile={handleOpenProfile} onMessage={handleStartDirectConversation} user={user} />}
     {activeNav === 'Marketplace' && <MarketplaceScreen user={user} onAuth={requireAuth} onStartConversation={handleStartConversation} />}
@@ -117,7 +123,7 @@ function App() {
     {activeNav === 'Profile' && !profileUserId && !user && <main className="px-5 py-16 text-center lg:ml-[248px]"><h1 className="text-2xl font-extrabold">Sign in to view your profile</h1><button onClick={requireAuth} className="mt-4 rounded-xl bg-[#087cf5] px-4 py-3 text-sm font-bold text-white">Sign in</button></main>}
     {activeNav === 'Management' && hasRole(user, 'MANAGER', 'ADMIN') && <ManagementDashboard user={user} />}
     {activeNav === 'Management' && !hasRole(user, 'MANAGER', 'ADMIN') && <main className="px-5 py-16 text-center lg:ml-[248px]"><h1 className="text-2xl font-extrabold">Management access required</h1><p className="mt-2 text-sm text-slate-500">Sign in with a manager or admin account to continue.</p>{!user && <button onClick={requireAuth} className="mt-4 rounded-xl bg-[#087cf5] px-4 py-3 text-sm font-bold text-white">Sign in</button>}</main>}
-    <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around gap-1 border-t border-[#e3e8f0] bg-white px-2 py-3 lg:hidden">{navigationItems.map((item) => <NavButton key={item.label} item={item} active={activeNav === item.label} onClick={() => handleNavigate(item)} mobile />)}</nav>
+    <nav className="fixed inset-x-0 bottom-0 z-20 flex justify-around gap-1 border-t border-border bg-surface px-2 py-3 lg:hidden">{navigationItems.map((item) => <NavButton key={item.label} item={item} active={activeNav === item.label} onClick={() => handleNavigate(item)} mobile />)}</nav>
     {authMode && <AuthScreen initialMode={authMode} onClose={() => setAuthMode(null)} onSignedIn={(response) => { signIn(response); setAuthMode(null) }} />}
   </div>
 }
