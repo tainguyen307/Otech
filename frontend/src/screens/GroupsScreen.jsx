@@ -368,21 +368,21 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
     <div className="mx-auto max-w-[1180px]">
       {groupId
         ? <button type="button" onClick={onBack} className="mb-5 inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-bold text-slate-500 hover:bg-white hover:text-blue-600 dark:text-slate-400 dark:hover:bg-slate-900"><ArrowLeft size={17} />Tất cả nhóm</button>
-        : <header className="mb-7">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">Otech · Cộng đồng</p>
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Khám phá nhóm</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Tìm cộng đồng theo danh mục hàng hóa, tham gia trao đổi và chia sẻ bài viết.</p>
+        : <header className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">Otech · Cộng đồng</p>
+            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">Khám phá nhóm</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">Tìm cộng đồng theo danh mục hàng hóa, tham gia trao đổi và chia sẻ bài viết.</p>
+          </div>
+          <button type="button" onClick={() => user ? setShowCreateForm((value) => !value) : onAuth()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"><Plus size={16} />Tạo nhóm</button>
         </header>}
 
       {notice && <p role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</p>}
       {error && <div role="alert" className="mb-5 flex items-center justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"><span>{error}</span><button type="button" onClick={refresh} className="font-bold underline">Thử lại</button></div>}
 
       {!groupId && <>
-        <div className="mb-4 flex justify-end">
-          <button type="button" onClick={() => user ? setShowCreateForm((value) => !value) : onAuth()} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-bold text-white hover:bg-blue-700"><Plus size={16} />Tạo nhóm</button>
-        </div>
         {showCreateForm && <GroupForm categories={categories} onSave={saveGroup} onCancel={() => setShowCreateForm(false)} isSaving={isSaving} />}
-        <form onSubmit={submitSearch} className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-[1fr_220px_auto]">
+        <form onSubmit={submitSearch} className="mb-7 grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900 sm:grid-cols-[1fr_220px_auto]">
           <label className="relative">
             <span className="sr-only">Tìm nhóm</span>
             <Search size={17} aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -395,7 +395,7 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
           </select>
           <button type="submit" className="min-h-11 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white hover:bg-blue-700">Tìm nhóm</button>
         </form>
-        {user && myGroups.length > 0 && <section className="mb-7">
+        {user && myGroups.length > 0 && <section className="mb-8">
           <h2 className="mb-3 text-lg font-extrabold text-slate-900 dark:text-white">Nhóm của bạn</h2>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{myGroups.map((group) => <GroupCard key={group.id} group={group} onOpen={onOpenGroup} />)}</div>
         </section>}
@@ -404,7 +404,11 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
           {totalPages > 1 && <span className="text-xs text-slate-500 dark:text-slate-400">Trang {page + 1}/{totalPages}</span>}
         </div>
         {isLoading && <Loading />}
-        {!isLoading && visibleGroups.length === 0 && <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">Chưa tìm thấy nhóm phù hợp.</p>}
+        {!isLoading && !error && visibleGroups.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center dark:border-slate-700 dark:bg-slate-900">
+          <UsersRound size={24} aria-hidden="true" className="mx-auto text-slate-400" />
+          <p className="mt-3 text-sm font-semibold text-slate-700 dark:text-slate-200">Chưa tìm thấy nhóm phù hợp.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Thử thay đổi từ khóa hoặc chọn danh mục khác.</p>
+        </div>}
         {!isLoading && groups.length > 0 && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{groups.map((group) => <GroupCard key={group.id} group={group} onOpen={onOpenGroup} />)}</div>}
         {!isLoading && totalPages > 1 && <div className="mt-6 flex items-center justify-center gap-3">
           <button type="button" disabled={page === 0} onClick={() => setPage((value) => Math.max(0, value - 1))} className="min-h-10 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900">Trước</button>
@@ -415,13 +419,13 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
       {groupId && isLoading && <Loading />}
       {groupId && !isLoading && selectedGroup && <section className="space-y-5">
         <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="relative h-40 bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 sm:h-56">
+          <div className="relative z-0 h-40 bg-slate-100 dark:bg-slate-800 sm:h-56">
             {selectedGroup.coverUrl && <img src={selectedGroup.coverUrl} alt="" className="h-full w-full object-cover" />}
             <span className="absolute right-4 top-4 rounded-full border border-white/40 bg-white/90 px-3 py-1.5 text-xs font-bold text-blue-800">{selectedGroup.visibility === 'PRIVATE' ? 'Nhóm riêng tư' : 'Nhóm công khai'}</span>
+            <div className="absolute bottom-0 left-5 z-10 flex h-20 w-20 translate-y-1/2 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-md sm:left-8 dark:border-slate-900 dark:bg-slate-800"><GroupAvatar group={selectedGroup} /></div>
           </div>
-          <div className="px-5 pb-6 sm:px-8">
-            <div className="-mt-10 flex h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-md dark:border-slate-900 dark:bg-slate-800"><GroupAvatar group={selectedGroup} /></div>
-            <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="px-5 pb-6 pt-12 sm:px-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div><h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{selectedGroup.name}</h1>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Quản trị bởi <span className="font-semibold text-slate-700 dark:text-slate-200">{selectedGroup.ownerName}</span></p>
               </div>
@@ -477,7 +481,7 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
               <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-slate-700 dark:text-slate-200">{post.content}</p>
               {post.imageUrls?.map((image) => <img key={image} src={image} alt="" className="mt-3 max-h-[480px] w-full rounded-xl object-cover" />)}
             </article>)}</div>
-            {!posts.length && !groupPostComposer && <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">Chưa có bài viết nào trong nhóm.</p>}
+            {!posts.length && !error && <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900">Chưa có bài viết nào trong nhóm. Hãy bắt đầu cuộc trò chuyện đầu tiên.</p>}
           </>}
       </section>}
     </div>
@@ -485,16 +489,18 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
 }
 
 function GroupCard({ group, onOpen }) {
-  return <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
-    <div className="h-24 bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400">{group.coverUrl && <img src={group.coverUrl} alt="" className="h-full w-full object-cover" />}</div>
-    <div className="px-4 pb-4">
-      <div className="-mt-8 h-16 w-16 overflow-hidden rounded-xl border-4 border-white bg-white shadow-sm dark:border-slate-900 dark:bg-slate-800"><GroupAvatar group={group} /></div>
+  return <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition-colors hover:border-blue-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-500">
+    <div className="relative z-0 h-24 bg-slate-100 dark:bg-slate-800">
+      {group.coverUrl && <img src={group.coverUrl} alt="" className="h-full w-full object-cover" />}
+      <div className="absolute bottom-0 left-4 z-10 flex h-16 w-16 translate-y-1/2 overflow-hidden rounded-xl border-4 border-white bg-white shadow-sm dark:border-slate-900 dark:bg-slate-800"><GroupAvatar group={group} /></div>
+    </div>
+    <div className="px-4 pb-4 pt-10">
       <h3 className="mt-3 line-clamp-1 text-base font-extrabold text-slate-900 dark:text-white">{group.name}</h3>
-      <p className="mt-1 text-xs font-semibold text-blue-600 dark:text-blue-300">{group.categoryName || 'Chưa phân loại'} · {group.visibility === 'PRIVATE' ? 'Riêng tư' : 'Công khai'}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">{group.categoryName || 'Chưa phân loại'} <span aria-hidden="true">·</span> {group.visibility === 'PRIVATE' ? 'Riêng tư' : 'Công khai'}</p>
       <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-5 text-slate-500 dark:text-slate-400">{group.description || 'Chưa có giới thiệu.'}</p>
       <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
         <span>{group.memberCount} thành viên · {group.postCount} bài</span>
-        <button type="button" onClick={() => onOpen(group.id)} className="font-bold text-blue-600 hover:underline dark:text-blue-300">Xem nhóm</button>
+        <button type="button" onClick={() => onOpen(group.id)} className="min-h-10 rounded-lg px-2 font-bold text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-slate-800">Xem nhóm</button>
       </div>
     </div>
   </article>
