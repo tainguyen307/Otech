@@ -16,6 +16,7 @@ import com.vn.otech.entity.Group;
 import com.vn.otech.entity.GroupPost;
 import com.vn.otech.entity.GroupPostStatus;
 import com.vn.otech.entity.GroupVisibility;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.User;
 import com.vn.otech.group.dto.GroupPostRequest;
 import com.vn.otech.group.dto.GroupRequest;
@@ -26,6 +27,7 @@ import com.vn.otech.group.repository.GroupPostRepository;
 import com.vn.otech.group.repository.GroupProjection;
 import com.vn.otech.group.repository.GroupRepository;
 import com.vn.otech.market.repository.CategoryRepository;
+import com.vn.otech.notification.service.NotificationService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +50,7 @@ class GroupServiceTest {
     @Mock private GroupPostImageRepository postImageRepository;
     @Mock private CategoryRepository categoryRepository;
     @Mock private UserRepository userRepository;
+    @Mock private NotificationService notificationService;
 
     @Test
     void listTrimsSearchAndReturnsCategoryAndPagingMetadata() {
@@ -131,6 +134,33 @@ class GroupServiceTest {
         assertEquals("A listing", result.content());
     }
 
+    @Test
+    void privateGroupNotifiesOwnerOnlyWhenANewJoinRequestIsCreated() {
+        User requester = user(UUID.randomUUID(), "member@example.com", "Member");
+        User owner = user(UUID.randomUUID(), "owner@example.com", "Owner");
+        Group group = new Group();
+        group.setId(UUID.randomUUID());
+        group.setName("Local books");
+        group.setOwner(owner);
+        group.setVisibility(GroupVisibility.PRIVATE);
+        when(userRepository.findByEmailIgnoreCase(requester.getEmail())).thenReturn(Optional.of(requester));
+        when(groupRepository.findById(group.getId())).thenReturn(Optional.of(group));
+        when(memberRepository.existsById_GroupIdAndId_UserId(group.getId(), requester.getId())).thenReturn(false);
+        when(joinRequestRepository.existsByGroup_IdAndUser_IdAndStatus(group.getId(), requester.getId(), "PENDING"))
+                .thenReturn(false, true);
+
+        assertEquals("PENDING", service().joinGroup(requester.getEmail(), group.getId()));
+        assertEquals("PENDING", service().joinGroup(requester.getEmail(), group.getId()));
+
+        verify(joinRequestRepository).save(any());
+        verify(notificationService).create(
+                owner,
+                NotificationType.GROUP_JOIN_REQUEST,
+                "New join request",
+                "Member asked to join Local books.",
+                group.getId());
+    }
+
     private GroupService service() {
         return new GroupService(
                 groupRepository,
@@ -139,7 +169,8 @@ class GroupServiceTest {
                 postRepository,
                 postImageRepository,
                 categoryRepository,
-                userRepository);
+                userRepository,
+                notificationService);
     }
 
     private User user(UUID id, String email, String name) {

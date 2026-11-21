@@ -34,9 +34,15 @@ export default function HomeScreen({ saved, onSave, onAuth, onOpenProfile, onMes
   }, [fetchPosts, user?.id])
 
   useEffect(() => {
-    const postId = window.location.hash.match(/^#post-(.+)$/)?.[1]
-    if (!postId || isLoading) return
-    document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    function scrollToPost() {
+      const postId = window.location.hash.match(/^#post-(.+)$/)?.[1]
+      if (!postId || isLoading) return
+      document.getElementById(`post-${postId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+
+    scrollToPost()
+    window.addEventListener('hashchange', scrollToPost)
+    return () => window.removeEventListener('hashchange', scrollToPost)
   }, [isLoading])
 
   async function loadPosts() {

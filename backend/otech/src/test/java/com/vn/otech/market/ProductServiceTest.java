@@ -28,6 +28,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -57,7 +58,9 @@ class ProductServiceTest {
         assertEquals("Desk", response.items().getFirst().title());
         assertTrue(response.hasMore());
         assertNotNull(response.nextCursor());
-        verify(productRepository).search(any(ProductSearchFilter.class));
+        ArgumentCaptor<ProductSearchFilter> filter = ArgumentCaptor.forClass(ProductSearchFilter.class);
+        verify(productRepository).search(filter.capture());
+        assertEquals(ProductStatus.SELLING, filter.getValue().status());
     }
 
     @Test
@@ -85,6 +88,27 @@ class ProductServiceTest {
 
         assertEquals(ProductStatus.SOLD, response.status());
         assertTrue(response.imageUrls().isEmpty());
+    }
+
+    @Test
+    void soldListingsCanBeIncludedInSearchAndStillOpenedAsDetails() {
+        Product soldProduct = product("Chair", ProductStatus.SOLD);
+        when(productRepository.search(any(ProductSearchFilter.class))).thenReturn(List.of(soldProduct));
+        when(productImageRepository.findByProductIdInOrderByDisplayOrderAsc(any())).thenReturn(List.of());
+
+        ProductPageResponse response = productService.search(
+                null, null, null, null, null, null, ProductStatus.SOLD, "newest", null, 24);
+
+        assertEquals(ProductStatus.SOLD, response.items().getFirst().status());
+        ArgumentCaptor<ProductSearchFilter> filter = ArgumentCaptor.forClass(ProductSearchFilter.class);
+        verify(productRepository).search(filter.capture());
+        assertEquals(ProductStatus.SOLD, filter.getValue().status());
+
+        when(productRepository.findWithSellerAndCategoryById(soldProduct.getId()))
+                .thenReturn(Optional.of(soldProduct));
+        var details = productService.getPublicProduct(soldProduct.getId());
+
+        assertEquals(ProductStatus.SOLD, details.status());
     }
 
     @Test
