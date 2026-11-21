@@ -5,13 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.vn.otech.auth.repository.UserRepository;
 import com.vn.otech.entity.AccountStatus;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.User;
 import com.vn.otech.entity.UserFollow;
+import com.vn.otech.notification.service.NotificationService;
 import com.vn.otech.post.service.PostService;
 import com.vn.otech.profile.dto.PublicProfileResponse;
 import com.vn.otech.profile.repository.UserFollowRepository;
@@ -30,6 +33,7 @@ class PublicProfileServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private UserFollowRepository userFollowRepository;
     @Mock private PostService postService;
+    @Mock private NotificationService notificationService;
 
     @Test
     void publicProfileIncludesPostAndFollowCountsWithoutExposingPrivateFields() {
@@ -65,6 +69,12 @@ class PublicProfileServiceTest {
         service().follow(viewer.getEmail(), target.getId());
 
         verify(userFollowRepository).save(any(UserFollow.class));
+        verify(notificationService, times(1)).create(
+                org.mockito.ArgumentMatchers.eq(target),
+                org.mockito.ArgumentMatchers.eq(NotificationType.FOLLOW_USER),
+                org.mockito.ArgumentMatchers.eq("New follower"),
+                org.mockito.ArgumentMatchers.eq("Profile user started following you."),
+                org.mockito.ArgumentMatchers.eq(viewer.getId()));
     }
 
     @Test
@@ -94,7 +104,7 @@ class PublicProfileServiceTest {
     }
 
     private PublicProfileService service() {
-        return new PublicProfileService(userRepository, userFollowRepository, postService);
+        return new PublicProfileService(userRepository, userFollowRepository, postService, notificationService);
     }
 
     private User user(UUID id, String email) {

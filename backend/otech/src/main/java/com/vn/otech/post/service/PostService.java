@@ -8,7 +8,9 @@ import com.vn.otech.entity.PostImage;
 import com.vn.otech.entity.PostLike;
 import com.vn.otech.entity.PostLikeId;
 import com.vn.otech.entity.PostShare;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.User;
+import com.vn.otech.notification.service.NotificationService;
 import com.vn.otech.post.dto.CommentRequest;
 import com.vn.otech.post.dto.CommentResponse;
 import com.vn.otech.post.dto.PostInteractionResponse;
@@ -41,6 +43,7 @@ public class PostService {
     private final CommentRepository commentRepository;
     private final PostImageRepository postImageRepository;
     private final PostShareRepository postShareRepository;
+    private final NotificationService notificationService;
 
     public PostService(
             PostRepository postRepository,
@@ -48,13 +51,15 @@ public class PostService {
             PostLikeRepository postLikeRepository,
             CommentRepository commentRepository,
             PostImageRepository postImageRepository,
-            PostShareRepository postShareRepository) {
+            PostShareRepository postShareRepository,
+            NotificationService notificationService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.postLikeRepository = postLikeRepository;
         this.commentRepository = commentRepository;
         this.postImageRepository = postImageRepository;
         this.postShareRepository = postShareRepository;
+        this.notificationService = notificationService;
     }
 
     public List<PostResponse> listPosts() {
@@ -110,6 +115,14 @@ public class PostService {
             like.setUser(user);
             like.setPost(post);
             postLikeRepository.save(like);
+            if (post.getAuthor() != null && !post.getAuthor().getId().equals(user.getId())) {
+                notificationService.create(
+                        post.getAuthor(),
+                        NotificationType.LIKE_POST,
+                        "New like",
+                        user.getFullName() + " liked your post.",
+                        post.getId());
+            }
         }
         return interactions(postId, user.getId());
     }
@@ -146,7 +159,16 @@ public class PostService {
         comment.setPost(post);
         comment.setParentComment(parent);
         comment.setContent(request.content().trim());
-        return toCommentResponse(commentRepository.save(comment));
+        Comment savedComment = commentRepository.save(comment);
+        if (post.getAuthor() != null && !post.getAuthor().getId().equals(user.getId())) {
+            notificationService.create(
+                    post.getAuthor(),
+                    NotificationType.COMMENT_POST,
+                    "New comment",
+                    user.getFullName() + ": " + shorten(savedComment.getContent()),
+                    post.getId());
+        }
+        return toCommentResponse(savedComment);
     }
 
     @Transactional
@@ -277,6 +299,10 @@ public class PostService {
             return "Community post";
         }
         return content.length() > 56 ? content.substring(0, 56) + "..." : content;
+    }
+
+    private String shorten(String content) {
+        return content.length() > 120 ? content.substring(0, 117) + "..." : content;
     }
 
     private String formatAge(LocalDateTime createdAt) {
