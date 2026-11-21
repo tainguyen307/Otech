@@ -5,6 +5,8 @@ import com.vn.otech.entity.AccountStatus;
 import com.vn.otech.entity.User;
 import com.vn.otech.entity.UserFollow;
 import com.vn.otech.entity.UserFollowId;
+import com.vn.otech.entity.NotificationType;
+import com.vn.otech.notification.service.NotificationService;
 import com.vn.otech.post.dto.PostResponse;
 import com.vn.otech.post.service.PostService;
 import com.vn.otech.profile.dto.PublicProfileResponse;
@@ -22,13 +24,16 @@ public class PublicProfileService {
     private final UserRepository userRepository;
     private final UserFollowRepository userFollowRepository;
     private final PostService postService;
+    private final NotificationService notificationService;
 
     public PublicProfileService(UserRepository userRepository,
                                 UserFollowRepository userFollowRepository,
-                                PostService postService) {
+                                PostService postService,
+                                NotificationService notificationService) {
         this.userRepository = userRepository;
         this.userFollowRepository = userFollowRepository;
         this.postService = postService;
+        this.notificationService = notificationService;
     }
 
     public PublicProfileResponse getProfile(UUID userId, String viewerEmail) {
@@ -62,6 +67,12 @@ public class PublicProfileService {
             follow.setFollower(viewer);
             follow.setFollowing(target);
             userFollowRepository.save(follow);
+            notificationService.create(
+                    target,
+                    NotificationType.FOLLOW_USER,
+                    "New follower",
+                    viewer.getFullName() + " started following you.",
+                    viewer.getId());
         }
     }
 

@@ -13,6 +13,7 @@ import com.vn.otech.auth.repository.UserRepository;
 import com.vn.otech.entity.Comment;
 import com.vn.otech.entity.Post;
 import com.vn.otech.entity.User;
+import com.vn.otech.notification.service.NotificationService;
 import com.vn.otech.post.dto.CommentRequest;
 import com.vn.otech.post.dto.PostInteractionResponse;
 import com.vn.otech.post.dto.PostRequest;
@@ -53,6 +54,9 @@ class PostServiceTest {
 
     @Mock
     private PostShareRepository postShareRepository;
+
+    @Mock
+    private NotificationService notificationService;
 
     @InjectMocks
     private PostService postService;

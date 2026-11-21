@@ -21,11 +21,13 @@ import com.vn.otech.entity.Conversation;
 import com.vn.otech.entity.ConversationParticipant;
 import com.vn.otech.entity.Message;
 import com.vn.otech.entity.MessageStatus;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.Product;
 import com.vn.otech.entity.ProductStatus;
 import com.vn.otech.entity.User;
 import com.vn.otech.market.repository.ProductImageRepository;
 import com.vn.otech.market.repository.ProductRepository;
+import com.vn.otech.notification.service.NotificationService;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -53,6 +55,7 @@ class ChatServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private SimpMessagingTemplate messagingTemplate;
     @Mock private SimpUserRegistry simpUserRegistry;
+    @Mock private NotificationService notificationService;
     @InjectMocks private ChatService chatService;
 
     private User sender;
@@ -93,6 +96,12 @@ class ChatServiceTest {
         assertEquals(sender.getId(), response.senderId());
         assertEquals(MessageStatus.SENT, response.status());
         verify(messageRepository).saveAndFlush(any(Message.class));
+        verify(notificationService).create(
+                eq(recipient),
+                eq(NotificationType.MESSAGE),
+                eq("New message"),
+                eq("Sender: Hello there"),
+                eq(conversation.getId()));
         verify(messagingTemplate).convertAndSendToUser(eq(recipient.getEmail()), eq("/queue/messages"), any());
         verify(messagingTemplate).convertAndSendToUser(eq(sender.getEmail()), eq("/queue/messages"), any());
     }
@@ -107,6 +116,7 @@ class ChatServiceTest {
                 sender.getEmail(), conversation.getId(), new MessageSendRequest(clientMessageId, "Hello")));
 
         verify(messageRepository, never()).saveAndFlush(any(Message.class));
+        verify(notificationService, never()).create(any(), any(), anyString(), anyString(), any());
     }
 
     @Test

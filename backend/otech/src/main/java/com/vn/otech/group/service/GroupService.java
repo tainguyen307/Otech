@@ -11,6 +11,7 @@ import com.vn.otech.entity.GroupPost;
 import com.vn.otech.entity.GroupPostImage;
 import com.vn.otech.entity.GroupPostStatus;
 import com.vn.otech.entity.GroupVisibility;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.RoleName;
 import com.vn.otech.entity.User;
 import com.vn.otech.group.dto.GroupJoinRequestResponse;
@@ -25,6 +26,7 @@ import com.vn.otech.group.repository.GroupPostRepository;
 import com.vn.otech.group.repository.GroupProjection;
 import com.vn.otech.group.repository.GroupRepository;
 import com.vn.otech.market.repository.CategoryRepository;
+import com.vn.otech.notification.service.NotificationService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.PageRequest;
@@ -46,6 +48,7 @@ public class GroupService {
     private final GroupPostImageRepository postImageRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public GroupService(
             GroupRepository groupRepository,
@@ -54,7 +57,8 @@ public class GroupService {
             GroupPostRepository postRepository,
             GroupPostImageRepository postImageRepository,
             CategoryRepository categoryRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            NotificationService notificationService) {
         this.groupRepository = groupRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -62,6 +66,7 @@ public class GroupService {
         this.postImageRepository = postImageRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public GroupPageResponse listGroups(String search, UUID categoryId, int page, int size) {
@@ -158,6 +163,12 @@ public class GroupService {
             request.setUser(user);
             request.setStatus("PENDING");
             joinRequestRepository.save(request);
+            notificationService.create(
+                    group.getOwner(),
+                    NotificationType.GROUP_JOIN_REQUEST,
+                    "New join request",
+                    user.getFullName() + " asked to join " + group.getName() + ".",
+                    group.getId());
         }
         return "PENDING";
     }
@@ -202,6 +213,12 @@ public class GroupService {
         request.setStatus(approved ? "APPROVED" : "REJECTED");
         if (approved) {
             saveMembership(group, request.getUser(), "MEMBER");
+            notificationService.create(
+                    request.getUser(),
+                    NotificationType.GROUP_JOIN_ACCEPTED,
+                    "Join request accepted",
+                    "Your request to join " + group.getName() + " was accepted.",
+                    group.getId());
         }
     }
 

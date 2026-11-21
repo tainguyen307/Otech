@@ -87,6 +87,30 @@ function App() {
   const handleStartConversation = (conversationId) => {
     navigateTo(`/messages/${encodeURIComponent(conversationId)}`)
   }
+  const handleOpenNotification = (notification) => {
+    if (notification.referenceId && notification.type === 'MESSAGE') {
+      navigateTo(`/messages/${encodeURIComponent(notification.referenceId)}`)
+    } else if (notification.referenceId && notification.type === 'FOLLOW_USER') {
+      handleOpenProfile(notification.referenceId)
+    } else if (notification.referenceId
+      && (notification.type === 'GROUP_JOIN_REQUEST' || notification.type === 'GROUP_JOIN_ACCEPTED')) {
+      navigateTo(`/groups/${encodeURIComponent(notification.referenceId)}`)
+    } else if (notification.referenceId
+      && (notification.type === 'LIKE_POST' || notification.type === 'COMMENT_POST')) {
+      const postHash = `#post-${encodeURIComponent(notification.referenceId)}`
+      if (window.location.pathname === '/') {
+        if (window.location.hash === postHash) {
+          document.getElementById(`post-${notification.referenceId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        } else {
+          window.location.hash = postHash
+        }
+      } else {
+        navigateTo(`/${postHash}`)
+      }
+    } else {
+      navigateTo('/')
+    }
+  }
   const handleStartDirectConversation = async (recipientId) => {
     if (!user) {
       requireAuth()
@@ -107,7 +131,7 @@ function App() {
   }
   return <div className="min-h-screen bg-background text-foreground">
     <DesktopSidebar activeNav={activeNav} onNavigate={handleNavigate} onAuth={requireAuth} items={navigationItems} user={user} />
-    <Header activeNav={activeNav} onAuth={requireAuth} darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => {
+    <Header activeNav={activeNav} onAuth={requireAuth} darkMode={darkMode} onOpenNotification={handleOpenNotification} onToggleTheme={() => setDarkMode((value) => {
       const next = !value
       localStorage.setItem('theme', next ? 'dark' : 'light')
       return next

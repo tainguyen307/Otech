@@ -16,11 +16,13 @@ import com.vn.otech.entity.ConversationParticipant;
 import com.vn.otech.entity.ConversationParticipantId;
 import com.vn.otech.entity.Message;
 import com.vn.otech.entity.MessageStatus;
+import com.vn.otech.entity.NotificationType;
 import com.vn.otech.entity.Product;
 import com.vn.otech.entity.ProductStatus;
 import com.vn.otech.entity.User;
 import com.vn.otech.market.repository.ProductImageRepository;
 import com.vn.otech.market.repository.ProductRepository;
+import com.vn.otech.notification.service.NotificationService;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -55,6 +57,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final SimpUserRegistry simpUserRegistry;
+    private final NotificationService notificationService;
 
     public ChatService(ConversationRepository conversationRepository,
                        ConversationParticipantRepository participantRepository,
@@ -63,7 +66,8 @@ public class ChatService {
                        ProductImageRepository productImageRepository,
                        UserRepository userRepository,
                        SimpMessagingTemplate messagingTemplate,
-                       SimpUserRegistry simpUserRegistry) {
+                       SimpUserRegistry simpUserRegistry,
+                       NotificationService notificationService) {
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
@@ -72,6 +76,7 @@ public class ChatService {
         this.userRepository = userRepository;
         this.messagingTemplate = messagingTemplate;
         this.simpUserRegistry = simpUserRegistry;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -238,6 +243,12 @@ public class ChatService {
             message.setStatus(MessageStatus.DELIVERED);
         }
         message = messageRepository.saveAndFlush(message);
+        notificationService.create(
+                recipient,
+                NotificationType.MESSAGE,
+                "New message",
+                sender.getFullName() + ": " + shorten(content),
+                conversationId);
         MessageResponse response = toMessageResponse(message);
         publishMessageAfterCommit(sender.getEmail(), recipient.getEmail(), response);
         return response;
@@ -257,6 +268,10 @@ public class ChatService {
         participant.setConversation(conversation);
         participant.setUser(user);
         return participant;
+    }
+
+    private String shorten(String content) {
+        return content.length() > 120 ? content.substring(0, 117) + "..." : content;
     }
 
     private ConversationResponse toConversationResponse(
