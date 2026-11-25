@@ -6,6 +6,10 @@ import com.vn.otech.chat.dto.MessagePageResponse;
 import com.vn.otech.chat.dto.MessageResponse;
 import com.vn.otech.chat.dto.MessageSendRequest;
 import com.vn.otech.chat.service.ChatService;
+import com.vn.otech.market.dto.ProductReviewRequest;
+import com.vn.otech.market.dto.ProductReviewsResponse;
+import com.vn.otech.market.dto.ProductTransactionResponse;
+import com.vn.otech.market.service.ProductTransactionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -13,6 +17,7 @@ import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -36,10 +41,15 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/conversations")
 public class ChatController {
     private final ChatService chatService;
+    private final ProductTransactionService productTransactionService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public ChatController(ChatService chatService, SimpMessagingTemplate messagingTemplate) {
+    public ChatController(
+            ChatService chatService,
+            ProductTransactionService productTransactionService,
+            SimpMessagingTemplate messagingTemplate) {
         this.chatService = chatService;
+        this.productTransactionService = productTransactionService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -80,6 +90,31 @@ public class ChatController {
             @AuthenticationPrincipal UserDetails principal,
             @PathVariable UUID conversationId) {
         chatService.markRead(principal.getUsername(), conversationId);
+    }
+
+    @GetMapping("/{conversationId}/transaction")
+    public ResponseEntity<ProductTransactionResponse> transaction(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable UUID conversationId) {
+        ProductTransactionResponse transaction =
+                productTransactionService.getTransaction(principal.getUsername(), conversationId);
+        return transaction == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(transaction);
+    }
+
+    @PostMapping("/{conversationId}/transaction/confirm")
+    public ProductTransactionResponse confirmTransaction(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable UUID conversationId) {
+        return productTransactionService.confirmTransaction(principal.getUsername(), conversationId);
+    }
+
+    @PostMapping("/{conversationId}/product-review")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProductReviewsResponse reviewProduct(
+            @AuthenticationPrincipal UserDetails principal,
+            @PathVariable UUID conversationId,
+            @Valid @RequestBody ProductReviewRequest request) {
+        return productTransactionService.createReview(principal.getUsername(), conversationId, request);
     }
 
     @MessageMapping("/conversations/{conversationId}/messages")

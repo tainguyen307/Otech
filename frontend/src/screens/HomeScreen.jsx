@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LoaderCircle, RefreshCw, ShieldCheck } from 'lucide-react'
+import { ArrowRight, LoaderCircle, RefreshCw, ShieldCheck, Tag, UsersRound } from 'lucide-react'
 import PostCard from '../components/PostCard'
 import PostComposer from '../components/PostComposer'
 import { apiErrorMessage, apiFetch } from '../lib/api'
 
-const filters = ['For you', 'Nearby', 'Furniture', 'Tech', 'Free']
-
-export default function HomeScreen({ saved, onSave, onAuth, onOpenProfile, onMessage, user }) {
+export default function HomeScreen({ saved, onSave, onAuth, onOpenProfile, onMessage, onBrowseCategory, onBrowseGroupCategory, onBrowseMarket, onBrowseGroups, user }) {
   const [posts, setPosts] = useState([])
-  const [activeFilter, setActiveFilter] = useState('For you')
+  const [categories, setCategories] = useState([])
   const [editingPost, setEditingPost] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
   const [error, setError] = useState('')
+  const [categoryError, setCategoryError] = useState('')
   const [actionError, setActionError] = useState('')
   const [notice, setNotice] = useState('')
+  const [categoryRefreshKey, setCategoryRefreshKey] = useState(0)
 
   const fetchPosts = useCallback(async (signal) => {
     const response = await apiFetch('/posts', { signal })
@@ -32,6 +33,27 @@ export default function HomeScreen({ saved, onSave, onAuth, onOpenProfile, onMes
       .finally(() => { if (active) setIsLoading(false) })
     return () => controller.abort()
   }, [fetchPosts, user?.id])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    apiFetch('/categories', { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await apiErrorMessage(response, 'Could not load categories.'))
+        return response.json()
+      })
+      .then((items) => {
+        if (!controller.signal.aborted) setCategories(Array.isArray(items) ? items : [])
+      })
+      .catch((requestError) => {
+        if (!controller.signal.aborted && requestError.name !== 'AbortError') {
+          setCategoryError(requestError.message || 'Could not load categories.')
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoadingCategories(false)
+      })
+    return () => controller.abort()
+  }, [categoryRefreshKey])
 
   useEffect(() => {
     function scrollToPost() {
@@ -148,13 +170,29 @@ export default function HomeScreen({ saved, onSave, onAuth, onOpenProfile, onMes
       <section>
         <div className="mb-7">
           <p className="mb-2 text-xs font-bold uppercase tracking-[0.18em] text-[#087cf5]">Your community</p>
-          <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#172238] dark:text-white sm:text-4xl">Good finds, shared well.</h1>
-          <p className="mt-2 text-sm text-[#718097] dark:text-slate-400">See what your neighbors are passing on today.</p>
+          <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#172238] dark:text-white sm:text-4xl">Find your corner of Otech.</h1>
+          <p className="mt-2 text-sm text-[#718097] dark:text-slate-400">Start with a category to find relevant listings and communities.</p>
         </div>
+        <section aria-labelledby="category-heading" className="mb-8 rounded-2xl border border-[#e3e8f0] bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 id="category-heading" className="text-xl font-extrabold text-[#172238] dark:text-white">Browse by category</h2>
+              <p className="mt-1 text-sm text-[#718097] dark:text-slate-400">A more focused way to discover secondhand finds.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={onBrowseGroups} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-[#dfe6ef] px-3 text-xs font-bold text-[#526078] hover:bg-[#f5f7fa] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><UsersRound size={15} />Explore groups</button>
+              <button type="button" onClick={onBrowseMarket} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#eaf3ff] px-3 text-xs font-bold text-[#087cf5] hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950">All listings<ArrowRight size={14} /></button>
+            </div>
+          </div>
+          {isLoadingCategories && <div className="flex min-h-20 items-center justify-center gap-2 text-sm text-[#718097] dark:text-slate-400"><LoaderCircle size={17} className="animate-spin text-[#087cf5]" />Loading categories…</div>}
+          {categoryError && !isLoadingCategories && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300"><span>{categoryError}</span><button type="button" onClick={() => { setIsLoadingCategories(true); setCategoryError(''); setCategoryRefreshKey((value) => value + 1) }} className="inline-flex min-h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:bg-slate-900 dark:text-rose-300 dark:hover:bg-rose-950"><RefreshCw size={13} />Try again</button></div>}
+          {!isLoadingCategories && !categoryError && categories.length === 0 && <p className="rounded-xl bg-[#f5f7fa] px-4 py-5 text-sm text-[#718097] dark:bg-slate-800 dark:text-slate-400">Categories are not available yet. You can still browse all listings.</p>}
+          {!isLoadingCategories && !categoryError && categories.length > 0 && <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">{categories.map((category) => <article key={category.id} className="rounded-xl border border-[#e3e8f0] bg-white p-3 dark:border-slate-700 dark:bg-slate-950"><div className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#eaf3ff] text-[#087cf5] dark:bg-blue-950/50 dark:text-blue-300"><Tag size={16} /></span><h3 className="truncate text-sm font-bold text-[#34445d] dark:text-slate-200">{category.name}</h3></div><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => onBrowseCategory(category.id)} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg bg-[#eaf3ff] px-2 text-xs font-bold text-[#087cf5] hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087cf5] dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950">Listings<ArrowRight size={13} /></button><button type="button" onClick={() => onBrowseGroupCategory(category.id)} className="inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border border-[#dfe6ef] px-2 text-xs font-bold text-[#526078] hover:bg-[#f5f7fa] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087cf5] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Groups<ArrowRight size={13} /></button></div></article>)}</div>}
+        </section>
         {user
           ? <PostComposer key={editingPost?.id || 'new-post'} post={editingPost} isSaving={isSaving} onSave={savePost} onCancel={() => setEditingPost(null)} />
           : <button type="button" onClick={onAuth} className="mb-6 w-full rounded-2xl border border-[#dce8f5] bg-white p-4 text-left text-sm font-semibold text-[#718097] shadow-sm hover:border-[#087cf5] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">Sign in to share a post with your community</button>}
-        <div className="mb-6 flex gap-2 overflow-x-auto pb-1">{filters.map((filter) => <button key={filter} onClick={() => setActiveFilter(filter)} className={`min-h-9 whitespace-nowrap rounded-full px-4 py-2.5 text-xs font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#087cf5] ${activeFilter === filter ? 'bg-[#172238] text-white dark:bg-slate-700' : 'bg-white text-[#718097] ring-1 ring-[#e3e8f0] hover:bg-[#eaf3ff] hover:text-[#087cf5] dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-950 dark:hover:text-blue-300'}`}>{filter}</button>)}</div>
+        <div className="mb-4"><h2 className="text-xl font-extrabold text-[#172238] dark:text-white">Community posts</h2><p className="mt-1 text-sm text-[#718097] dark:text-slate-400">Conversations from across Otech.</p></div>
         {actionError && <p role="alert" className="mb-4 rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{actionError}</p>}
         {notice && <p role="status" className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{notice}</p>}
         {isLoading && <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e3e8f0] p-10 text-sm text-[#718097] dark:border-slate-700 dark:text-slate-400"><LoaderCircle size={18} className="animate-spin text-[#087cf5]" /> Loading community posts...</div>}

@@ -15,7 +15,7 @@ public record ProductRequest(
         @NotBlank @Size(max = 255) String title,
         @Size(max = 10000) String description,
         @NotNull @DecimalMin("0.01") @Digits(integer = 13, fraction = 2) BigDecimal price,
-        UUID categoryId,
+        @NotNull UUID categoryId,
         @NotNull ProductCondition condition,
         @Size(max = 255) String location,
         @Size(max = 10) List<@NotBlank @Size(max = 2000)
