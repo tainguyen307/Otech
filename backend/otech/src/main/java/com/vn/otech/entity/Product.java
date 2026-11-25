@@ -25,6 +25,7 @@ public class Product {
     @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.NAMED_ENUM) @Column(nullable = false, columnDefinition = "product_condition") private ProductCondition condition;
     private String location;
     @Enumerated(EnumType.STRING) @JdbcTypeCode(SqlTypes.NAMED_ENUM) @Column(columnDefinition = "product_status") private ProductStatus status = ProductStatus.SELLING;
+    @Column(name = "boosted_until") private LocalDateTime boostedUntil;
     @CreationTimestamp @Column(name = "created_at", updatable = false) private LocalDateTime createdAt;
     @UpdateTimestamp @Column(name = "updated_at") private LocalDateTime updatedAt;
 }

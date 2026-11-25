@@ -131,7 +131,7 @@ function GroupAvatar({ group }) {
     : <span aria-hidden="true" className="flex h-full w-full items-center justify-center bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300"><UsersRound size={25} /></span>
 }
 
-export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAuth }) {
+export default function GroupsScreen({ groupId, initialCategoryId = '', onOpenGroup, onBack, user, onAuth }) {
   const [groups, setGroups] = useState([])
   const [myGroups, setMyGroups] = useState([])
   const [categories, setCategories] = useState([])
@@ -141,7 +141,7 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
   const [joinRequests, setJoinRequests] = useState([])
   const [search, setSearch] = useState('')
   const [appliedSearch, setAppliedSearch] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const [categoryId, setCategoryId] = useState(initialCategoryId)
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [totalElements, setTotalElements] = useState(0)
@@ -257,6 +257,15 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
     event.preventDefault()
     setPage(0)
     setAppliedSearch(search.trim())
+  }
+
+  function selectCategory(nextCategoryId) {
+    setCategoryId(nextCategoryId)
+    setPage(0)
+    const url = new URL(window.location.href)
+    if (nextCategoryId) url.searchParams.set('categoryId', nextCategoryId)
+    else url.searchParams.delete('categoryId')
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
   }
 
   async function saveGroup(form) {
@@ -389,7 +398,7 @@ export default function GroupsScreen({ groupId, onOpenGroup, onBack, user, onAut
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm tên nhóm hoặc chủ đề…" className="min-h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm dark:border-slate-700 dark:bg-slate-950" />
           </label>
           <label className="sr-only" htmlFor="group-category-filter">Lọc theo danh mục</label>
-          <select id="group-category-filter" value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(0) }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+          <select id="group-category-filter" value={categoryId} onChange={(event) => selectCategory(event.target.value)} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950">
             <option value="">Tất cả danh mục</option>
             {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
           </select>

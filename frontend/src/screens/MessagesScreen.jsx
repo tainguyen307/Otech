@@ -43,6 +43,12 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState('')
   const [chatError, setChatError] = useState('')
+  const [productTransaction, setProductTransaction] = useState(null)
+  const [transactionRefreshKey, setTransactionRefreshKey] = useState(0)
+  const [transactionActionLoading, setTransactionActionLoading] = useState(false)
+  const [reviewRating, setReviewRating] = useState(5)
+  const [reviewComment, setReviewComment] = useState('')
+  const [reviewedConversationId, setReviewedConversationId] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
   const clientRef = useRef(null)
   const selectedIdRef = useRef('')
@@ -52,6 +58,8 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
   const pendingMessagesRef = useRef(new Map())
   const appliedInitialIdRef = useRef('')
   const conversation = conversations.find((item) => item.id === selectedId)
+  const conversationProductId = conversation?.product?.id
+  const activeTransaction = conversation?.product?.id === productTransaction?.productId ? productTransaction : null
 
   useEffect(() => { selectedIdRef.current = selectedId }, [selectedId])
 
@@ -217,6 +225,26 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
   }, [selectedId])
 
   useEffect(() => {
+    if (!selectedId || !conversationProductId) return undefined
+    const controller = new AbortController()
+    apiFetch(`/conversations/${selectedId}/transaction`, { signal: controller.signal })
+      .then(async (response) => {
+        if (response.status === 204) return null
+        if (!response.ok) throw new Error(await apiErrorMessage(response, 'Could not load transaction status.'))
+        return response.json()
+      })
+      .then((transaction) => {
+        if (!controller.signal.aborted) setProductTransaction(transaction)
+      })
+      .catch((requestError) => {
+        if (requestError.name !== 'AbortError' && !controller.signal.aborted) {
+          setChatError(requestError.message || 'Could not load transaction status.')
+        }
+      })
+    return () => controller.abort()
+  }, [conversationProductId, selectedId, transactionRefreshKey])
+
+  useEffect(() => {
     if (initialConversationId && appliedInitialIdRef.current !== initialConversationId
       && conversations.some((item) => item.id === initialConversationId)) {
       appliedInitialIdRef.current = initialConversationId
@@ -347,6 +375,43 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
     }
   }
 
+  async function confirmTransaction() {
+    setTransactionActionLoading(true)
+    setChatError('')
+    try {
+      const response = await apiFetch(`/conversations/${selectedId}/transaction/confirm`, { method: 'POST' })
+      if (!response.ok) throw new Error(await apiErrorMessage(response, 'Could not confirm this transaction.'))
+      const result = await response.json()
+      setProductTransaction(result)
+    } catch (requestError) {
+      setChatError(requestError.message || 'Could not confirm this transaction.')
+    } finally {
+      setTransactionActionLoading(false)
+    }
+  }
+
+  async function submitProductReview(event) {
+    event.preventDefault()
+    setTransactionActionLoading(true)
+    setChatError('')
+    try {
+      const response = await apiFetch(`/conversations/${selectedId}/product-review`, {
+        method: 'POST',
+        body: JSON.stringify({ rating: reviewRating, comment: reviewComment.trim() || null }),
+      })
+      if (!response.ok) throw new Error(await apiErrorMessage(response, 'Could not submit your review.'))
+      await response.json()
+      setReviewedConversationId(selectedId)
+      setProductTransaction((current) => current?.productId === conversation?.product?.id
+        ? { ...current, reviewSubmitted: true }
+        : current)
+    } catch (requestError) {
+      setChatError(requestError.message || 'Could not submit your review.')
+    } finally {
+      setTransactionActionLoading(false)
+    }
+  }
+
   function selectConversation(id) {
     setSelectedId(id)
     setChatError('')
@@ -384,6 +449,30 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
               {conversation.product?.imageUrl && <img src={conversation.product.imageUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />}
             </header>
             {conversation.product && <div className="flex items-center gap-3 border-b border-[#eef1f5] bg-[#fafbfd] px-4 py-2.5 dark:border-slate-800 dark:bg-slate-950/50"><Tag size={14} className="shrink-0 text-[#087cf5]" /><p className="truncate text-xs font-semibold text-[#526078] dark:text-slate-300">Listing: {conversation.product.title}</p></div>}
+            {conversation.product && <section aria-label="Transaction confirmation" className="border-b border-[#eef1f5] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-extrabold text-[#172238] dark:text-white">{activeTransaction?.status === 'COMPLETED' ? 'Giao dịch đã hoàn tất' : 'Xác nhận giao dịch'}</p>
+                  <p className="mt-1 text-xs leading-5 text-[#718097] dark:text-slate-400">{activeTransaction?.status === 'COMPLETED'
+                    ? 'Người mua và người bán đã xác nhận. Tin đã được đánh dấu đã bán.'
+                    : `Cả hai bên cần xác nhận. ${activeTransaction?.currentUserConfirmed ? 'Bạn đã xác nhận' : 'Bạn chưa xác nhận'} · ${activeTransaction?.otherPartyConfirmed ? 'bên kia đã xác nhận' : 'đang chờ bên kia'}.`}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {activeTransaction?.status !== 'COMPLETED' && <button type="button" onClick={confirmTransaction} disabled={transactionActionLoading || activeTransaction?.currentUserConfirmed} className="min-h-9 rounded-lg bg-[#087cf5] px-3 text-xs font-bold text-white disabled:opacity-50">{transactionActionLoading ? 'Đang xử lý…' : activeTransaction?.currentUserIsSeller ? 'Xác nhận đã bán' : 'Xác nhận đã nhận hàng'}</button>}
+                  {activeTransaction?.status === 'PENDING' && <button type="button" onClick={() => setTransactionRefreshKey((value) => value + 1)} className="min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#526078] dark:border-slate-700 dark:text-slate-300">Làm mới</button>}
+                </div>
+              </div>
+              {activeTransaction?.status === 'COMPLETED' && activeTransaction.currentUserIsBuyer && !activeTransaction.reviewSubmitted && reviewedConversationId !== selectedId && <form onSubmit={submitProductReview} className="mt-3 grid gap-2 border-t border-[#eef1f5] pt-3 sm:grid-cols-[150px_1fr_auto] dark:border-slate-800">
+                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Đánh giá sản phẩm
+                  <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))} className="mt-1 min-h-9 w-full rounded-lg border border-[#dfe6ef] bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950">{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select>
+                </label>
+                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Nhận xét (tùy chọn)
+                  <input value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength="1000" className="mt-1 min-h-9 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950" placeholder="Chia sẻ trải nghiệm thực tế" />
+                </label>
+                <button type="submit" disabled={transactionActionLoading} className="self-end min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#087cf5] disabled:opacity-50 dark:border-slate-700">{transactionActionLoading ? 'Đang gửi…' : 'Gửi đánh giá'}</button>
+              </form>}
+              {activeTransaction?.status === 'COMPLETED' && (activeTransaction.reviewSubmitted || reviewedConversationId === selectedId) && <p role="status" className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Đã gửi đánh giá xác thực cho sản phẩm.</p>}
+            </section>}
             {chatError && <div role="alert" className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300"><span>{chatError}</span><button onClick={() => setChatError('')} aria-label="Dismiss chat error" className="shrink-0 rounded p-0.5"><XIcon /></button></div>}
             <div aria-live="polite" aria-relevant="additions text" className="flex-1 space-y-3 overflow-y-auto bg-[#fbfcfe] px-3 py-4 dark:bg-slate-950/30 sm:px-5">
               {hasMore && <div className="text-center"><button onClick={loadOlder} disabled={isLoadingOlder} className="inline-flex min-h-9 items-center gap-2 rounded-full border border-[#dfe6ef] bg-white px-3 text-xs font-bold text-[#526078] disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">{isLoadingOlder && <LoaderCircle size={13} className="animate-spin" />}Load earlier messages</button></div>}

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.cloudinary.Cloudinary;
 import com.vn.otech.auth.repository.UserRepository;
+import com.vn.otech.billing.service.BillingClock;
+import com.vn.otech.billing.service.PostingQuotaService;
 import com.vn.otech.entity.Product;
 import com.vn.otech.entity.ProductCondition;
 import com.vn.otech.entity.ProductStatus;
@@ -42,6 +44,8 @@ class ProductServiceTest {
     @Mock private CategoryRepository categoryRepository;
     @Mock private UserRepository userRepository;
     @Mock private ObjectProvider<Cloudinary> cloudinaryProvider;
+    @Mock private PostingQuotaService postingQuotaService;
+    @Mock private BillingClock billingClock;
     @InjectMocks private ProductService productService;
 
     @Test
@@ -72,7 +76,7 @@ class ProductServiceTest {
     }
 
     @Test
-    void sellersCanChangeTheirListingStatus() {
+    void sellersCanChangeTheirListingVisibility() {
         UUID productId = UUID.randomUUID();
         Product product = product("Chair", ProductStatus.SELLING);
         product.setId(productId);
@@ -84,10 +88,17 @@ class ProductServiceTest {
         when(productImageRepository.findByProductIdInOrderByDisplayOrderAsc(any())).thenReturn(List.of());
 
         var response = productService.updateStatus(
-                "seller@example.com", productId, new ProductStatusRequest(ProductStatus.SOLD), List.of("ROLE_USER"));
+                "seller@example.com", productId, new ProductStatusRequest(ProductStatus.HIDDEN), List.of("ROLE_USER"));
 
-        assertEquals(ProductStatus.SOLD, response.status());
+        assertEquals(ProductStatus.HIDDEN, response.status());
         assertTrue(response.imageUrls().isEmpty());
+    }
+
+    @Test
+    void sellersCannotMarkListingsSoldWithoutTransactionConfirmation() {
+        UUID productId = UUID.randomUUID();
+        assertThrows(ResponseStatusException.class, () -> productService.updateStatus(
+                "seller@example.com", productId, new ProductStatusRequest(ProductStatus.SOLD), List.of("ROLE_USER")));
     }
 
     @Test
@@ -125,7 +136,7 @@ class ProductServiceTest {
         when(productRepository.findWithSellerAndCategoryById(productId)).thenReturn(Optional.of(product));
 
         assertThrows(ResponseStatusException.class, () -> productService.updateStatus(
-                "other@example.com", productId, new ProductStatusRequest(ProductStatus.SOLD), List.of("ROLE_USER")));
+                "other@example.com", productId, new ProductStatusRequest(ProductStatus.HIDDEN), List.of("ROLE_USER")));
     }
 
     private Product product(String title, ProductStatus status) {

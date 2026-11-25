@@ -8,7 +8,10 @@ import com.vn.otech.market.dto.ProductPageResponse;
 import com.vn.otech.market.dto.ProductRequest;
 import com.vn.otech.market.dto.ProductResponse;
 import com.vn.otech.market.dto.ProductStatusRequest;
+import com.vn.otech.market.dto.ProductReviewRequest;
+import com.vn.otech.market.dto.ProductReviewsResponse;
 import com.vn.otech.market.service.ProductService;
+import com.vn.otech.market.service.ProductTransactionService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -40,9 +43,11 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api")
 public class ProductController {
     private final ProductService productService;
+    private final ProductTransactionService productTransactionService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, ProductTransactionService productTransactionService) {
         this.productService = productService;
+        this.productTransactionService = productTransactionService;
     }
 
     @GetMapping("/categories")
@@ -69,6 +74,16 @@ public class ProductController {
     @GetMapping("/products/{productId}")
     public ProductResponse product(@PathVariable UUID productId) {
         return productService.getPublicProduct(productId);
+    }
+
+    @GetMapping("/products/featured")
+    public List<ProductResponse> featuredProducts(@RequestParam(required = false) UUID categoryId) {
+        return productService.listFeatured(categoryId);
+    }
+
+    @GetMapping("/products/{productId}/reviews")
+    public ProductReviewsResponse reviews(@PathVariable UUID productId) {
+        return productTransactionService.getProductReviews(productId);
     }
 
     @GetMapping("/user/products")

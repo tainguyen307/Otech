@@ -10,6 +10,9 @@ Otech là ứng dụng cộng đồng và mua bán hàng hóa đã qua sử dụ
 - Cập nhật hồ sơ, đổi mật khẩu và tải ảnh đại diện.
 - Mở hồ sơ công khai từ avatar bài đăng, xem bài viết và theo dõi hoặc nhắn tin cho thành viên.
 - Tìm kiếm, lọc, xem chi tiết, đăng và quản lý tin sản phẩm đã qua sử dụng.
+- Khám phá tin từ trang chủ theo danh mục; tin mới/cập nhật bắt buộc thuộc một danh mục hợp lệ.
+- Hạn mức một tin miễn phí mỗi ngày; gói lượt đăng trả phí và gói đẩy tin do Admin cấu hình, Manager/Admin đối soát thanh toán thủ công.
+- Chỉ đánh dấu tin đã bán sau khi người mua và người bán cùng xác nhận trong hội thoại; người mua có giao dịch hoàn tất được đánh giá sản phẩm một lần.
 - Nhắn tin theo sản phẩm hoặc trực tiếp; lưu lịch sử, cập nhật realtime và trạng thái đã đọc.
 - Khám phá nhóm theo danh mục hàng hóa; tạo, sửa, xóa nhóm; tham gia nhóm công khai hoặc gửi yêu cầu vào nhóm riêng tư.
 - Đăng bài trong nhóm, đính kèm ảnh; quản trị viên nhóm có thể bật/tắt duyệt bài, duyệt/từ chối bài viết và yêu cầu tham gia.
@@ -17,7 +20,7 @@ Otech là ứng dụng cộng đồng và mua bán hàng hóa đã qua sử dụ
 - Admin tạo, khóa/mở khóa, vô hiệu hóa Manager và chuyển vai trò giữa User/Manager.
 - Giao diện responsive, hỗ trợ chế độ sáng/tối và cài đặt PWA.
 
-Các luồng bài viết, marketplace, chat, nhóm và dashboard quản trị dùng API thật; giao dịch/thanh toán không thuộc phạm vi hệ thống. Nhóm được lưu trong bảng `groups` và dùng API `/api/groups`. Thông báo cho người dùng thông thường chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
+Các luồng marketplace, hạn mức đăng tin, đẩy tin, xác nhận giao dịch và đánh giá sau giao dịch được triển khai qua API thật. Thanh toán hiện là chuyển khoản QR và đối soát thủ công; hệ thống không kết nối cổng thanh toán, không giữ tiền và không xử lý vận chuyển. Admin phải cấu hình QR cùng ít nhất một gói dịch vụ trước khi người dùng có thể mua. Manager/Admin chỉ duyệt sau khi kiểm tra giao dịch thực nhận, số tiền, mã chuyển khoản và bằng chứng. Bot tự động chống spam chưa được triển khai. Nhóm được lưu trong bảng `groups` và dùng API `/api/groups`. Thông báo cho người dùng thông thường chưa được kết nối đầy đủ; một số khu vực giao diện cũ còn là nội dung giữ chỗ.
 
 ## Cấu trúc dự án
 
@@ -62,7 +65,7 @@ Frontend và backend là hai tiến trình riêng. Khi triển khai, cần cấu
 - SMTP để gửi mã xác minh và khôi phục mật khẩu
 - Cloudinary để bật tải ảnh đại diện
 
-Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. Toàn bộ thay đổi database, gồm bảng `post_shares`, được quản lý trong file `script.sql` ở thư mục cha của repository. Chạy file này trong pgAdmin hoặc psql để cập nhật database hiện tại. Với database cũ, script đổi tên các bảng và enum `page` sang `group` mà không xóa dữ liệu; có thể chạy riêng `migrate_pages_to_groups.sql` trước khi triển khai code mới. Luồng nhóm hỗ trợ danh mục hàng hóa (`category_id`) và trạng thái/cấu hình duyệt bài.
+Hibernate không tự tạo schema vì `spring.jpa.hibernate.ddl-auto=none`. Toàn bộ schema và migration database, gồm danh mục, billing, credit đăng tin, giao dịch xác nhận và đánh giá, nằm trong một file `script.sql` ở thư mục workspace. Chạy duy nhất file này bằng pgAdmin hoặc psql để thiết lập database mới hoặc nâng cấp database hiện có. Script dùng `CREATE ... IF NOT EXISTS`, `ALTER ... ADD COLUMN IF NOT EXISTS`, seed có điều kiện và các thao tác đổi tên Page sang Group theo kiểu giữ nguyên dữ liệu; không drop/truncate bảng hay xóa các bản ghi hiện có. File `migrate_monetization.sql` và `migrate_pages_to_groups.sql` chỉ còn là migration độc lập nếu cần chạy riêng, không bắt buộc khi chạy `script.sql`.
 
 ## Cấu hình
 
@@ -71,21 +74,23 @@ Backend đọc các biến môi trường sau. Hãy cấu hình chúng trong mô
 | Biến | Mục đích | Mặc định / ghi chú |
 | --- | --- | --- |
 | `DB_URL` | JDBC URL của PostgreSQL | `jdbc:postgresql://localhost:5432/Otech` |
-| `DB_USERNAME`, `DB_PASSWORD` | Tài khoản cơ sở dữ liệu | Bắt buộc; không có thông tin xác thực mặc định trong source |
+| `DB_USERNAME`, `DB_PASSWORD` | Tài khoản cơ sở dữ liệu | Local mặc định dùng `postgres`; luôn đặt mật khẩu riêng qua môi trường |
 | `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD` | Kết nối Redis cho rate limit đăng nhập | `localhost`, `6379`, không mật khẩu |
-| `JWT_SECRET` | Khóa ký JWT | Bắt buộc; dùng khóa riêng, ngẫu nhiên, tối thiểu 32 byte |
+| `JWT_SECRET` | Khóa ký JWT | Bắt buộc khi triển khai; thay giá trị dự phòng trong properties bằng khóa ngẫu nhiên riêng, tối thiểu 32 byte |
 | `JWT_EXPIRATION_MS` | Thời hạn JWT, mili giây | `86400000` |
 | `SERVER_PORT` | Cổng API | `8080` |
 | `CORS_ALLOWED_ORIGINS` | Danh sách origin frontend, phân tách bằng dấu phẩy | `http://localhost:5173` |
-| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Kết nối SMTP | Host mặc định `smtp.gmail.com`, cổng `587`; cung cấp thông tin đăng nhập qua môi trường khi bật gửi mail |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD` | Kết nối SMTP | Host mặc định `smtp.gmail.com`, cổng `587`; thay mọi giá trị dự phòng bằng thông tin SMTP qua môi trường |
 | `MAIL_FROM` | Địa chỉ gửi email | Mặc định lấy từ `MAIL_USERNAME` |
 | `MAIL_SMTP_AUTH`, `MAIL_SMTP_STARTTLS` | Xác thực SMTP và TLS | Mặc định bật |
-| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện, ảnh bài viết và tin sản phẩm | Tùy chọn; lấy đúng ba giá trị từ Cloudinary Dashboard, chỉ bật upload khi cung cấp đủ thông tin qua môi trường |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Lưu ảnh đại diện, ảnh bài viết và tin sản phẩm | Thay mọi giá trị dự phòng bằng đúng ba giá trị của cùng một tài khoản Cloudinary qua môi trường trước khi triển khai |
+| `APP_MONETIZATION_FREE_LISTINGS_PER_DAY` | Số tin miễn phí mỗi ngày | `1`; thay đổi khi có chính sách được duyệt |
+| `APP_MONETIZATION_TIME_ZONE` | Múi giờ tính hạn mức và thời hạn gói | `Asia/Ho_Chi_Minh` |
 | `RESET_TOKEN_EXPIRATION_MINUTES` | Thời hạn mã khôi phục mật khẩu | `30` |
 | `SIGNUP_OTP_EXPIRATION_MINUTES` | Thời hạn mã xác minh đăng ký | `10` |
 | `LOGIN_MAX_FAILURES`, `LOGIN_LOCKOUT_MINUTES` | Số lần đăng nhập sai tối đa và thời hạn rate limit | `5` lần trong `15` phút |
 
-Source không lưu mật khẩu cơ sở dữ liệu, thông tin đăng nhập SMTP/Cloudinary hoặc khóa JWT. Hãy cấu hình chúng qua biến môi trường; API key phải đi cùng API secret thuộc cùng một Cloudinary account. Nếu Cloudinary trả lỗi `Invalid Signature`, kiểm tra lại Cloud name, API Key và API Secret trong Cloudinary Dashboard, sau đó khởi động lại backend. Không dùng `.env` của frontend để cấu hình backend. Nếu credential từng được lưu trong lịch sử Git còn hiệu lực, hãy thu hồi và thay mới.
+Trước khi triển khai, thay mọi giá trị nhạy cảm hoặc giá trị dự phòng trong `application.properties` bằng cấu hình lấy từ môi trường; API key phải đi cùng API secret thuộc cùng một Cloudinary account. Nếu Cloudinary trả lỗi `Invalid Signature`, kiểm tra lại Cloud name, API Key và API Secret trong Cloudinary Dashboard, sau đó khởi động lại backend. Không dùng `.env` của frontend để cấu hình backend. Nếu credential từng được lưu trong source hoặc lịch sử Git còn hiệu lực, hãy thu hồi và thay mới.
 
 Để cấu hình upload local, sao chép `backend/otech/.env.example` thành `backend/otech/.env`, điền Cloud name, API key và API secret từ cùng một Cloudinary account rồi khởi động backend với working directory `backend/otech`. `.env` đã được Git bỏ qua. Có thể thay bằng ba biến môi trường tương ứng; backend phải được khởi động lại sau khi cập nhật cấu hình.
 
@@ -102,7 +107,7 @@ Các kiểm thử khởi động backend dùng profile `test` với H2 trong b�
    psql -h localhost -U postgres -d Otech -f ..\script.sql
    ```
 
-   Nếu database đã có dữ liệu, có thể chạy lại **toàn bộ** `script.sql` trên đúng database. Các bảng, kiểu enum, cột bổ sung và index dùng `IF NOT EXISTS`; seed mẫu có xử lý xung đột hoặc kiểm tra trước khi thêm để tránh nhân bản. Phần cập nhật chat tạo `messages.client_message_id` nếu chưa có; đây là thay đổi additive, không xóa hay sửa tin nhắn hiện có. Không dùng bản `script.sql` cũ vì bản đó chưa tạo cột này. Đảm bảo URL và tài khoản cơ sở dữ liệu khớp với backend.
+   Nếu database đã có dữ liệu, sao lưu trước rồi chạy lại **duy nhất** `script.sql` trên đúng database. Các bảng, kiểu enum, cột bổ sung và index dùng điều kiện tồn tại; seed mẫu không nhân bản dữ liệu. Migration Page sang Group chỉ đổi tên bảng/cột/enum tại chỗ để ứng dụng mới tiếp tục dùng dữ liệu cũ; không xóa bảng hoặc bản ghi. Không cần chạy thêm migration SQL nào khác. Đảm bảo URL và tài khoản cơ sở dữ liệu khớp với backend.
 2. Mở PowerShell tại thư mục gốc `Otech`, đặt `DB_USERNAME`, `DB_PASSWORD` và `JWT_SECRET` trong môi trường chạy backend. Dùng khóa JWT ngẫu nhiên riêng cho từng môi trường (tối thiểu 32 byte). Cấu hình `MAIL_USERNAME`/`MAIL_PASSWORD` để gửi mã xác minh/khôi phục; cấu hình đủ ba biến Cloudinary để tải ảnh. Không ghi các giá trị này vào file được commit.
 3. Khởi động backend:
 
@@ -152,7 +157,9 @@ Các endpoint dùng tiền tố `/api`.
 | `GET` | `/user/products` | Đã xác thực | Danh sách tin của người dùng hiện tại |
 | `POST` | `/products` | Đã xác thực | Đăng tin sản phẩm |
 | `PUT` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Cập nhật nội dung và ảnh; thay thế toàn bộ request |
-| `PATCH` | `/products/{productId}/status` | Chủ tin hoặc Manager/Admin | Chuyển trạng thái `SELLING`, `SOLD` hoặc `HIDDEN` |
+| `GET` | `/products/featured?categoryId=` | Công khai | Tin đang được đẩy trong danh mục (hoặc toàn marketplace) |
+| `GET` | `/products/{productId}/reviews` | Công khai | Tổng hợp điểm và đánh giá từ giao dịch hoàn tất |
+| `PATCH` | `/products/{productId}/status` | Chủ tin hoặc Manager/Admin | Chuyển sang `SELLING` hoặc `HIDDEN`; `SOLD` chỉ được đặt qua xác nhận giao dịch hai phía |
 | `DELETE` | `/products/{productId}` | Chủ tin hoặc Manager/Admin | Lưu trữ tin bằng trạng thái `HIDDEN`, giữ lịch sử chat |
 | `POST` | `/products/images` | Đã xác thực | Tải JPEG/PNG/WebP tối đa 8 MB cho tin sản phẩm hoặc bài viết; cần cấu hình Cloudinary |
 | `GET` | `/conversations` | Đã xác thực | Liệt kê hội thoại; chỉ hiển thị một luồng cho mỗi người trò chuyện |
@@ -160,6 +167,16 @@ Các endpoint dùng tiền tố `/api`.
 | `GET` | `/conversations/{id}/messages` | Thành viên hội thoại | Lịch sử tin nhắn, phân trang cursor và tự đánh dấu đã đọc |
 | `POST` | `/conversations/{id}/messages` | Thành viên hội thoại | Gửi tin dự phòng qua HTTP; gửi lại cùng `clientMessageId` không tạo bản sao |
 | `POST` | `/conversations/{id}/read` | Thành viên hội thoại | Đánh dấu tin đến là đã đọc |
+| `GET` | `/conversations/{id}/transaction` | Thành viên hội thoại sản phẩm | Xem trạng thái xác nhận của hai bên |
+| `POST` | `/conversations/{id}/transaction/confirm` | Người mua hoặc người bán | Xác nhận giao dịch; chỉ hoàn tất sau khi cả hai bên xác nhận |
+| `POST` | `/conversations/{id}/product-review` | Người mua trong giao dịch hoàn tất | Đánh giá sản phẩm một lần cho giao dịch |
+| `GET` | `/billing/catalog`, `/billing/payment-requests` | Đã xác thực | Hạn mức đăng, gói đang bán, QR và lịch sử yêu cầu thanh toán |
+| `POST` | `/billing/payment-requests` | Đã xác thực | Tạo yêu cầu chuyển khoản cho gói lượt đăng hoặc đẩy tin |
+| `PATCH` | `/billing/payment-requests/{id}/proof` | Chủ yêu cầu | Gửi mã giao dịch ngân hàng hoặc ảnh biên lai |
+| `GET` | `/manager/billing/payment-requests?status=PENDING` | Manager/Admin | Liệt kê yêu cầu theo trạng thái |
+| `PATCH` | `/manager/billing/payment-requests/{id}` | Manager/Admin | Duyệt/từ chối sau đối soát thủ công |
+| `GET`, `POST`, `PUT` | `/admin/billing/packages` | Admin | Tạo, xem và cập nhật gói; không đổi điều khoản khi còn yêu cầu chờ xử lý |
+| `GET`, `PUT` | `/admin/billing/qr` | Admin | Xem/cấu hình QR thanh toán |
 | `GET` | `/manager/dashboard` | Manager/Admin | Thống kê User, sản phẩm, bài viết, Page, báo cáo và Manager |
 | `GET` | `/manager/users`, `/manager/products`, `/manager/posts`, `/manager/groups`, `/manager/reports` | Manager/Admin | Danh sách quản trị có tìm kiếm/lọc; phân trang bằng `page`/`size` (tối đa 100) |
 | `PATCH` | `/manager/users/{id}/status` | Manager/Admin | Khóa/mở khóa tài khoản USER; không sửa tài khoản Manager/Admin |

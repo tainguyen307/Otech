@@ -20,7 +20,8 @@ public record ProductResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         List<String> imageUrls,
-        SellerResponse seller) {
+        SellerResponse seller,
+        LocalDateTime boostedUntil) {
     public record SellerResponse(UUID id, String fullName, String avatarUrl) {
     }
 }
