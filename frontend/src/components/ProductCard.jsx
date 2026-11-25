@@ -14,13 +14,14 @@ const conditionLabels = {
   POOR: 'Well loved',
 }
 
-export default function ProductCard({ product, isOwner, onOpen, onEdit, onStartChat, onStatusChange }) {
+export default function ProductCard({ product, isOwner, onOpen, onEdit, onStartChat, onStatusChange, onOpenMessages }) {
   const imageUrl = product.imageUrls?.[0]
   return <article className="overflow-hidden rounded-2xl border border-[#e3e8f0] bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
     <button type="button" onClick={onOpen} className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-[#087cf5]">
       <div className="relative aspect-[4/3] overflow-hidden bg-[#eef3f8] dark:bg-slate-800">
         {imageUrl ? <img src={imageUrl} alt={product.title} loading="lazy" className="h-full w-full object-cover transition duration-300 hover:scale-[1.03]" /> : <div className="flex h-full items-center justify-center text-sm font-semibold text-[#718097] dark:text-slate-400">No photo yet</div>}
         <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-xs font-bold text-[#34445d] shadow-sm dark:bg-slate-950/90 dark:text-slate-200">{conditionLabels[product.condition] || 'Pre-loved'}</span>
+        {product.boostedUntil && new Date(product.boostedUntil) > new Date() && <span className="absolute right-3 top-3 rounded-full bg-[#087cf5] px-3 py-1 text-xs font-bold text-white">Featured</span>}
       </div>
       <div className="p-4">
         <p className="line-clamp-1 text-base font-extrabold text-[#172238] dark:text-white">{product.title}</p>
@@ -40,7 +41,7 @@ export default function ProductCard({ product, isOwner, onOpen, onEdit, onStartC
       {isOwner ? <>
         <button type="button" onClick={onEdit} className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-[#dfe6ef] px-3 text-xs font-bold text-[#526078] hover:bg-[#f5f7fa] dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"><Pencil size={14} />Edit</button>
         {product.status === 'SELLING'
-          ? <button type="button" onClick={() => onStatusChange('SOLD')} className="min-h-10 flex-1 rounded-xl bg-[#eaf3ff] px-3 text-xs font-bold text-[#087cf5] hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950">Mark sold</button>
+          ? <button type="button" onClick={onOpenMessages} className="min-h-10 flex-1 rounded-xl bg-[#eaf3ff] px-3 text-xs font-bold text-[#087cf5] hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950">Confirm sale</button>
           : <button type="button" onClick={() => onStatusChange('SELLING')} className="min-h-10 flex-1 rounded-xl bg-[#eaf3ff] px-3 text-xs font-bold text-[#087cf5] hover:bg-blue-100 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-950">Relist</button>}
       </> : product.status === 'SELLING' && <button type="button" onClick={onStartChat} className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#087cf5] px-3 text-xs font-bold text-white hover:bg-[#006cdf]"><MessageCircle size={15} />Message seller</button>}
     </div>

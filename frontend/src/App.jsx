@@ -16,10 +16,11 @@ import { apiErrorMessage, apiFetch } from './lib/api'
 
 function routeFromLocation() {
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
-  if (path === '/marketplace') return { activeNav: 'Marketplace', profileUserId: null, conversationId: '' }
-  if (path === '/groups') return { activeNav: 'Groups', profileUserId: null, conversationId: '', groupId: null }
+  const categoryId = new URLSearchParams(window.location.search).get('categoryId') || ''
+  if (path === '/marketplace') return { activeNav: 'Marketplace', profileUserId: null, conversationId: '', categoryId }
+  if (path === '/groups') return { activeNav: 'Groups', profileUserId: null, conversationId: '', groupId: null, categoryId }
   const groupMatch = path.match(/^\/groups\/([^/]+)$/)
-  if (groupMatch) return { activeNav: 'Groups', profileUserId: null, conversationId: '', groupId: decodeURIComponent(groupMatch[1]) }
+  if (groupMatch) return { activeNav: 'Groups', profileUserId: null, conversationId: '', groupId: decodeURIComponent(groupMatch[1]), categoryId: '' }
   if (path === '/messages') return { activeNav: 'Messages', profileUserId: null, conversationId: '' }
   const conversationMatch = path.match(/^\/messages\/([^/]+)$/)
   if (conversationMatch) {
@@ -45,7 +46,7 @@ function App() {
   })
   const { user, signIn, signOut, updateUser } = useAuth()
   const navigationItems = visibleNavItems(user)
-  const { activeNav, profileUserId, conversationId, groupId } = route
+  const { activeNav, profileUserId, conversationId, groupId, categoryId } = route
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)
@@ -61,7 +62,10 @@ function App() {
   }, [])
 
   const navigateTo = (path) => {
-    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+    const targetUrl = new URL(path, window.location.origin)
+    const target = `${targetUrl.pathname}${targetUrl.search}${targetUrl.hash}`
+    const current = `${window.location.pathname}${window.location.search}${window.location.hash}`
+    if (current !== target) window.history.pushState({}, '', target)
     setRoute(routeFromLocation())
     setActionError('')
   }
@@ -137,9 +141,9 @@ function App() {
       return next
     })} user={user} onSignOut={() => { signOut(); navigateTo('/') }} onHome={() => navigateTo('/')} onProfile={() => navigateTo('/profile')} />
     {actionError && <div role="alert" className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 lg:ml-[268px] lg:mr-10 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{actionError}</div>}
-    {activeNav === 'Home' && <HomeScreen saved={saved} onSave={(id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onAuth={requireAuth} onOpenProfile={handleOpenProfile} onMessage={handleStartDirectConversation} user={user} />}
-    {activeNav === 'Marketplace' && <MarketplaceScreen user={user} onAuth={requireAuth} onStartConversation={handleStartConversation} />}
-    {activeNav === 'Groups' && <GroupsScreen groupId={groupId} onOpenGroup={(id) => navigateTo(`/groups/${encodeURIComponent(id)}`)} onBack={() => navigateTo('/groups')} user={user} onAuth={requireAuth} />}
+    {activeNav === 'Home' && <HomeScreen saved={saved} onSave={(id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onAuth={requireAuth} onOpenProfile={handleOpenProfile} onMessage={handleStartDirectConversation} onBrowseCategory={(id) => navigateTo(`/marketplace?categoryId=${encodeURIComponent(id)}`)} onBrowseGroupCategory={(id) => navigateTo(`/groups?categoryId=${encodeURIComponent(id)}`)} onBrowseMarket={() => navigateTo('/marketplace')} onBrowseGroups={() => navigateTo('/groups')} user={user} />}
+    {activeNav === 'Marketplace' && <MarketplaceScreen key={categoryId} initialCategoryId={categoryId} user={user} onAuth={requireAuth} onStartConversation={handleStartConversation} onOpenMessages={(id) => navigateTo(id ? `/messages/${encodeURIComponent(id)}` : '/messages')} />}
+    {activeNav === 'Groups' && <GroupsScreen key={categoryId} groupId={groupId} initialCategoryId={categoryId} onOpenGroup={(id) => navigateTo(`/groups/${encodeURIComponent(id)}`)} onBack={() => navigateTo('/groups')} user={user} onAuth={requireAuth} />}
     {activeNav === 'Messages' && user && <MessagesScreen key={conversationId || 'messages'} user={user} initialConversationId={conversationId} onAuth={requireAuth} />}
     {activeNav === 'Messages' && !user && <main className="px-5 py-16 text-center lg:ml-[248px]"><h1 className="text-2xl font-extrabold">Sign in to view messages</h1><button onClick={requireAuth} className="mt-4 rounded-xl bg-[#087cf5] px-4 py-3 text-sm font-bold text-white">Sign in</button></main>}
     {activeNav === 'Profile' && profileUserId && <PublicProfileScreen key={profileUserId} userId={profileUserId} currentUser={user} onBack={() => navigateTo('/')} onAuth={requireAuth} onMessage={handleStartDirectConversation} />}

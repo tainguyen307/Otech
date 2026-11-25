@@ -4,6 +4,10 @@ import com.vn.otech.entity.AccountStatus;
 import com.vn.otech.entity.ProductStatus;
 import com.vn.otech.entity.ReportStatus;
 import com.vn.otech.entity.RoleName;
+import com.vn.otech.billing.dto.BillingPaymentDecisionRequest;
+import com.vn.otech.billing.dto.BillingPaymentResponse;
+import com.vn.otech.billing.entity.PaymentRequestStatus;
+import com.vn.otech.billing.service.BillingService;
 import com.vn.otech.management.dto.AccountStatusRequest;
 import com.vn.otech.management.dto.ContentVisibilityRequest;
 import com.vn.otech.management.dto.ManagementDashboardSummary;
@@ -20,15 +24,18 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
+import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -36,9 +43,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/manager")
 public class ManagerController {
     private final ManagementService managementService;
+    private final BillingService billingService;
 
-    public ManagerController(ManagementService managementService) {
+    public ManagerController(ManagementService managementService, BillingService billingService) {
         this.managementService = managementService;
+        this.billingService = billingService;
     }
 
     @GetMapping("/dashboard")
@@ -121,5 +130,19 @@ public class ManagerController {
             @Valid @RequestBody ReportDecisionRequest request,
             @AuthenticationPrincipal UserDetails principal) {
         return managementService.decideReport(reportId, request.status(), principal.getUsername());
+    }
+
+    @GetMapping("/billing/payment-requests")
+    public List<BillingPaymentResponse> paymentRequests(
+            @RequestParam(defaultValue = "PENDING") PaymentRequestStatus status) {
+        return billingService.listPaymentRequests(status);
+    }
+
+    @PatchMapping("/billing/payment-requests/{paymentRequestId}")
+    public BillingPaymentResponse reviewPaymentRequest(
+            @PathVariable UUID paymentRequestId,
+            @Valid @RequestBody BillingPaymentDecisionRequest request,
+            @AuthenticationPrincipal UserDetails principal) {
+        return billingService.reviewPaymentRequest(paymentRequestId, request, principal.getUsername());
     }
 }

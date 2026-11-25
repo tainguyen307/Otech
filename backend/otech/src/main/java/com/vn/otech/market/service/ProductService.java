@@ -20,8 +20,11 @@ import com.vn.otech.market.repository.ProductRepository;
 import com.vn.otech.market.repository.ProductSearchFilter;
 import com.vn.otech.market.repository.ProductSearchRepositoryImpl;
 import com.vn.otech.auth.repository.UserRepository;
+import com.vn.otech.billing.service.PostingQuotaService;
+import com.vn.otech.billing.service.BillingClock;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +35,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -47,17 +51,23 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ObjectProvider<Cloudinary> cloudinaryProvider;
+    private final PostingQuotaService postingQuotaService;
+    private final BillingClock billingClock;
 
     public ProductService(ProductRepository productRepository,
                           ProductImageRepository productImageRepository,
                           CategoryRepository categoryRepository,
                           UserRepository userRepository,
-                          ObjectProvider<Cloudinary> cloudinaryProvider) {
+                          ObjectProvider<Cloudinary> cloudinaryProvider,
+                          PostingQuotaService postingQuotaService,
+                          BillingClock billingClock) {
         this.productRepository = productRepository;
         this.productImageRepository = productImageRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.cloudinaryProvider = cloudinaryProvider;
+        this.postingQuotaService = postingQuotaService;
+        this.billingClock = billingClock;
     }
 
     public List<CategoryResponse> listCategories() {
@@ -121,9 +131,20 @@ public class ProductService {
         return toResponse(product, loadImages(List.of(product)));
     }
 
+    public List<ProductResponse> listFeatured(UUID categoryId) {
+        List<Product> products = categoryId == null
+                ? productRepository.findByStatusAndBoostedUntilAfterOrderByBoostedUntilDescCreatedAtDesc(
+                        ProductStatus.SELLING, billingClock.now(), PageRequest.of(0, 8))
+                : productRepository.findByStatusAndBoostedUntilAfterAndCategory_IdOrderByBoostedUntilDescCreatedAtDesc(
+                        ProductStatus.SELLING, billingClock.now(), categoryId, PageRequest.of(0, 8));
+        Map<UUID, List<String>> images = loadImages(products);
+        return products.stream().map(product -> toResponse(product, images)).toList();
+    }
+
     @Transactional
     public ProductResponse create(String email, ProductRequest request) {
         User seller = findActiveUser(email);
+        postingQuotaService.authorizeNewListing(seller);
         Product product = new Product();
         product.setSeller(seller);
         applyRequest(product, request);
@@ -147,6 +168,10 @@ public class ProductService {
     @Transactional
     public ProductResponse updateStatus(String email, UUID productId, ProductStatusRequest request,
                                         Collection<String> authorities) {
+        if (request.status() == ProductStatus.SOLD) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Complete a buyer-and-seller confirmation in the product conversation to mark a listing sold");
+        }
         Product product = findProduct(productId);
         requireOwnerOrManager(product, email, authorities);
         product.setStatus(request.status());
@@ -243,7 +268,8 @@ public class ProductService {
                 product.getCondition(), product.getLocation(), product.getStatus(),
                 product.getCreatedAt(), product.getUpdatedAt(),
                 images.getOrDefault(product.getId(), List.of()),
-                new ProductResponse.SellerResponse(seller.getId(), seller.getFullName(), seller.getAvatarUrl()));
+                new ProductResponse.SellerResponse(seller.getId(), seller.getFullName(), seller.getAvatarUrl()),
+                product.getBoostedUntil());
     }
 
     private Product findProduct(UUID productId) {
