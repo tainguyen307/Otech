@@ -75,20 +75,21 @@ export default function NotificationCenter({ user, onAuth, onSelect }) {
     if (shouldOpen) await loadNotifications()
   }
 
-  async function selectNotification(notification) {
-    if (!notification.read) {
-      try {
-        const response = await apiFetch(`/notifications/${notification.id}/read`, { method: 'PATCH' })
-        if (!response.ok) throw new Error(await apiErrorMessage(response, 'Could not mark notification as read.'))
-        setNotifications((current) => current.map((item) => item.id === notification.id ? { ...item, read: true } : item))
-        setUnreadCount((current) => Math.max(0, current - 1))
-      } catch (requestError) {
-        setError(requestError.message || 'Could not mark notification as read.')
-        return
-      }
-    }
+  function selectNotification(notification) {
     setIsOpen(false)
     onSelect(notification)
+    if (!notification.read) void markNotificationRead(notification.id)
+  }
+
+  async function markNotificationRead(notificationId) {
+    try {
+      const response = await apiFetch(`/notifications/${notificationId}/read`, { method: 'PATCH' })
+      if (!response.ok) return
+      setNotifications((current) => current.map((item) => item.id === notificationId ? { ...item, read: true } : item))
+      setUnreadCount((current) => Math.max(0, current - 1))
+    } catch {
+      // Keep local state unchanged; opening the center again reloads it from the server.
+    }
   }
 
   async function markAllRead() {

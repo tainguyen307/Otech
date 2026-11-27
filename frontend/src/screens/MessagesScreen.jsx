@@ -10,7 +10,7 @@ function websocketUrl() {
 
 function formatTime(value) {
   if (!value) return ''
-  return new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+  return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 }
 
 function formatConversationTime(value) {
@@ -19,7 +19,7 @@ function formatConversationTime(value) {
   const now = new Date()
   return date.toDateString() === now.toDateString()
     ? formatTime(value)
-    : new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(date)
+    : new Intl.DateTimeFormat('en-US', { day: '2-digit', month: '2-digit' }).format(date)
 }
 
 function upsertMessage(messages, incoming) {
@@ -452,26 +452,26 @@ export default function MessagesScreen({ user, initialConversationId, onAuth }) 
             {conversation.product && <section aria-label="Transaction confirmation" className="border-b border-[#eef1f5] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-extrabold text-[#172238] dark:text-white">{activeTransaction?.status === 'COMPLETED' ? 'Giao dịch đã hoàn tất' : 'Xác nhận giao dịch'}</p>
+                  <p className="text-sm font-extrabold text-[#172238] dark:text-white">{activeTransaction?.status === 'COMPLETED' ? 'Transaction completed' : 'Confirm transaction'}</p>
                   <p className="mt-1 text-xs leading-5 text-[#718097] dark:text-slate-400">{activeTransaction?.status === 'COMPLETED'
-                    ? 'Người mua và người bán đã xác nhận. Tin đã được đánh dấu đã bán.'
-                    : `Cả hai bên cần xác nhận. ${activeTransaction?.currentUserConfirmed ? 'Bạn đã xác nhận' : 'Bạn chưa xác nhận'} · ${activeTransaction?.otherPartyConfirmed ? 'bên kia đã xác nhận' : 'đang chờ bên kia'}.`}</p>
+                    ? 'The buyer and seller have confirmed. The listing has been marked as sold.'
+                    : `Both parties must confirm. ${activeTransaction?.currentUserConfirmed ? 'You have confirmed' : 'You have not confirmed'} · ${activeTransaction?.otherPartyConfirmed ? 'The other party has confirmed' : 'Waiting for the other party'}.`}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {activeTransaction?.status !== 'COMPLETED' && <button type="button" onClick={confirmTransaction} disabled={transactionActionLoading || activeTransaction?.currentUserConfirmed} className="min-h-9 rounded-lg bg-[#087cf5] px-3 text-xs font-bold text-white disabled:opacity-50">{transactionActionLoading ? 'Đang xử lý…' : activeTransaction?.currentUserIsSeller ? 'Xác nhận đã bán' : 'Xác nhận đã nhận hàng'}</button>}
-                  {activeTransaction?.status === 'PENDING' && <button type="button" onClick={() => setTransactionRefreshKey((value) => value + 1)} className="min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#526078] dark:border-slate-700 dark:text-slate-300">Làm mới</button>}
+                  {activeTransaction?.status !== 'COMPLETED' && <button type="button" onClick={confirmTransaction} disabled={transactionActionLoading || activeTransaction?.currentUserConfirmed} className="min-h-9 rounded-lg bg-[#087cf5] px-3 text-xs font-bold text-white disabled:opacity-50">{transactionActionLoading ? 'Processing…' : activeTransaction?.currentUserIsSeller ? 'Confirm sold' : 'Confirm received'}</button>}
+                  {activeTransaction?.status === 'PENDING' && <button type="button" onClick={() => setTransactionRefreshKey((value) => value + 1)} className="min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#526078] dark:border-slate-700 dark:text-slate-300">Refresh status</button>}
                 </div>
               </div>
               {activeTransaction?.status === 'COMPLETED' && activeTransaction.currentUserIsBuyer && !activeTransaction.reviewSubmitted && reviewedConversationId !== selectedId && <form onSubmit={submitProductReview} className="mt-3 grid gap-2 border-t border-[#eef1f5] pt-3 sm:grid-cols-[150px_1fr_auto] dark:border-slate-800">
-                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Đánh giá sản phẩm
+                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Product rating
                   <select value={reviewRating} onChange={(event) => setReviewRating(Number(event.target.value))} className="mt-1 min-h-9 w-full rounded-lg border border-[#dfe6ef] bg-white px-2 text-sm dark:border-slate-700 dark:bg-slate-950">{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} / 5</option>)}</select>
                 </label>
-                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Nhận xét (tùy chọn)
-                  <input value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength="1000" className="mt-1 min-h-9 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950" placeholder="Chia sẻ trải nghiệm thực tế" />
+                <label className="text-xs font-bold text-[#526078] dark:text-slate-300">Review (optional)
+                  <input value={reviewComment} onChange={(event) => setReviewComment(event.target.value)} maxLength="1000" className="mt-1 min-h-9 w-full rounded-lg border border-[#dfe6ef] bg-white px-3 text-sm font-normal dark:border-slate-700 dark:bg-slate-950" placeholder="Share your honest experience" />
                 </label>
-                <button type="submit" disabled={transactionActionLoading} className="self-end min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#087cf5] disabled:opacity-50 dark:border-slate-700">{transactionActionLoading ? 'Đang gửi…' : 'Gửi đánh giá'}</button>
+                <button type="submit" disabled={transactionActionLoading} className="self-end min-h-9 rounded-lg border border-[#dfe6ef] px-3 text-xs font-bold text-[#087cf5] disabled:opacity-50 dark:border-slate-700">{transactionActionLoading ? 'Submitting…' : 'Submit review'}</button>
               </form>}
-              {activeTransaction?.status === 'COMPLETED' && (activeTransaction.reviewSubmitted || reviewedConversationId === selectedId) && <p role="status" className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Đã gửi đánh giá xác thực cho sản phẩm.</p>}
+              {activeTransaction?.status === 'COMPLETED' && (activeTransaction.reviewSubmitted || reviewedConversationId === selectedId) && <p role="status" className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">Verified product review submitted.</p>}
             </section>}
             {chatError && <div role="alert" className="mx-4 mt-3 flex items-start justify-between gap-3 rounded-xl bg-rose-50 px-3 py-2.5 text-xs text-rose-700 dark:bg-rose-950/30 dark:text-rose-300"><span>{chatError}</span><button onClick={() => setChatError('')} aria-label="Dismiss chat error" className="shrink-0 rounded p-0.5"><XIcon /></button></div>}
             <div aria-live="polite" aria-relevant="additions text" className="flex-1 space-y-3 overflow-y-auto bg-[#fbfcfe] px-3 py-4 dark:bg-slate-950/30 sm:px-5">

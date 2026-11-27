@@ -112,6 +112,65 @@ class AuthServiceTest {
     }
 
     @Test
+    void authenticateReturnsGenericErrorForIncorrectPassword() {
+        User user = user();
+        user.setEmailVerified(true);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong-password", "hash:password123")).thenReturn(false);
+
+        BadCredentialsException exception = assertThrows(BadCredentialsException.class,
+                () -> service().authenticate(new AuthRequest("user@example.com", "wrong-password")));
+
+        assertEquals("Invalid email or password", exception.getMessage());
+        verify(loginAttemptService).recordFailure("user@example.com");
+    }
+
+    @Test
+    void authenticateExplainsLockedAccountOnlyAfterPasswordMatches() {
+        User user = user();
+        user.setStatus(AccountStatus.LOCKED);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "hash:password123")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> service().authenticate(new AuthRequest("user@example.com", "password123")));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertEquals("Your account is locked", exception.getReason());
+        verify(loginAttemptService).clearFailures("user@example.com");
+        verify(loginAttemptService, never()).recordFailure("user@example.com");
+    }
+
+    @Test
+    void authenticateExplainsDeactivatedAccountOnlyAfterPasswordMatches() {
+        User user = user();
+        user.setStatus(AccountStatus.DELETED);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "hash:password123")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> service().authenticate(new AuthRequest("user@example.com", "password123")));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertEquals("Your account has been deactivated", exception.getReason());
+    }
+
+    @Test
+    void authenticateRequiresEmailVerificationAfterPasswordMatches() {
+        User user = user();
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password123", "hash:password123")).thenReturn(true);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> service().authenticate(new AuthRequest("user@example.com", "password123")));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertEquals("Email is not verified", exception.getReason());
+        verify(loginAttemptService).clearFailures("user@example.com");
+        verify(loginAttemptService, never()).recordFailure("user@example.com");
+    }
+
+    @Test
     void authenticateLocksAfterConfiguredFailedAttempts() {
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.empty());
         when(loginAttemptService.isRateLimited("user@example.com")).thenReturn(false, false, true);

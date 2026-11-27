@@ -54,6 +54,11 @@ export default function AuthScreen({ initialMode = 'signIn', onClose, onSignedIn
           : ''
         const responseMessage = fieldMessages || apiError.message || body.message
           || (typeof body.error === 'string' ? body.error : '')
+        if (mode === 'signIn' && responseMessage === 'Email is not verified') {
+          setMode('verify')
+          setMessage('Please verify your email to continue. Enter the code sent to your inbox or request a new one.')
+          return
+        }
         if (responseMessage.includes('signup_otp_tokens') || responseMessage.includes('relation')) {
           throw new Error('Signup is temporarily unavailable')
         }

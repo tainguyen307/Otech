@@ -90,12 +90,20 @@ public class AuthService {
                     "Too many failed login attempts. Try again later.");
         }
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
-        if (user == null || user.getStatus() != AccountStatus.ACTIVE || !user.isEmailVerified()
-                || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             loginAttemptService.recordFailure(email);
             throw new BadCredentialsException("Invalid email or password");
         }
         loginAttemptService.clearFailures(email);
+        if (user.getStatus() == AccountStatus.LOCKED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is locked");
+        }
+        if (user.getStatus() == AccountStatus.DELETED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account has been deactivated");
+        }
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
+        }
         return createResponse(user);
     }
 
